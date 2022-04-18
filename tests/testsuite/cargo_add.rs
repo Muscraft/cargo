@@ -1,5 +1,6 @@
 use cargo_test_support::cargo_exe;
 use cargo_test_support::compare::assert;
+use cargo_test_support::Project;
 
 pub fn cargo_command() -> snapbox::cmd::Command {
     let mut cmd = snapbox::cmd::Command::new(cargo_exe()).with_assert(assert());
@@ -47,13 +48,6 @@ pub fn cargo_command() -> snapbox::cmd::Command {
         .env_remove("MSYSTEM"); // assume cmd.exe everywhere on windows
 
     cmd
-}
-
-pub fn project_from_template(template_path: impl AsRef<std::path::Path>) -> std::path::PathBuf {
-    let root = cargo_test_support::paths::root();
-    let project_root = root.join("case");
-    snapbox::path::copy_template(template_path.as_ref(), &project_root).unwrap();
-    project_root
 }
 
 fn init_registry() {
@@ -142,7 +136,8 @@ fn add_registry_packages(alt: bool) {
 #[cargo_test]
 fn add_basic() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/add_basic.in");
+    let project = Project::from_template("tests/snapshots/add/add_basic.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -160,7 +155,8 @@ fn add_basic() {
 #[cargo_test]
 fn add_multiple() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/add_multiple.in");
+    let project = Project::from_template("tests/snapshots/add/add_multiple.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -178,7 +174,8 @@ fn add_multiple() {
 #[cargo_test]
 fn quiet() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/quiet.in");
+    let project = Project::from_template("tests/snapshots/add/quiet.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -196,7 +193,8 @@ fn quiet() {
 #[cargo_test]
 fn add_normalized_name_external() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/add_normalized_name_external.in");
+    let project = Project::from_template("tests/snapshots/add/add_normalized_name_external.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -217,7 +215,8 @@ fn add_normalized_name_external() {
 #[cargo_test]
 fn infer_prerelease() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/infer_prerelease.in");
+    let project = Project::from_template("tests/snapshots/add/infer_prerelease.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -235,7 +234,8 @@ fn infer_prerelease() {
 #[cargo_test]
 fn build() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/build.in");
+    let project = Project::from_template("tests/snapshots/add/build.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -253,8 +253,8 @@ fn build() {
 #[cargo_test]
 fn build_prefer_existing_version() {
     init_alt_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/build_prefer_existing_version.in");
+    let project = Project::from_template("tests/snapshots/add/build_prefer_existing_version.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -275,7 +275,8 @@ fn build_prefer_existing_version() {
 #[cargo_test]
 fn default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/default_features.in");
+    let project = Project::from_template("tests/snapshots/add/default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -293,7 +294,8 @@ fn default_features() {
 #[cargo_test]
 fn require_weak() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/require_weak.in");
+    let project = Project::from_template("tests/snapshots/add/require_weak.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -311,7 +313,8 @@ fn require_weak() {
 #[cargo_test]
 fn dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/dev.in");
+    let project = Project::from_template("tests/snapshots/add/dev.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -329,7 +332,8 @@ fn dev() {
 #[cargo_test]
 fn dev_build_conflict() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/dev_build_conflict.in");
+    let project = Project::from_template("tests/snapshots/add/dev_build_conflict.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -347,7 +351,8 @@ fn dev_build_conflict() {
 #[cargo_test]
 fn dev_prefer_existing_version() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/dev_prefer_existing_version.in");
+    let project = Project::from_template("tests/snapshots/add/dev_prefer_existing_version.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -368,7 +373,8 @@ fn dev_prefer_existing_version() {
 #[cargo_test]
 fn dry_run() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/dry_run.in");
+    let project = Project::from_template("tests/snapshots/add/dry_run.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -386,7 +392,8 @@ fn dry_run() {
 #[cargo_test]
 fn features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features.in");
+    let project = Project::from_template("tests/snapshots/add/features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -404,7 +411,8 @@ fn features() {
 #[cargo_test]
 fn features_empty() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_empty.in");
+    let project = Project::from_template("tests/snapshots/add/features_empty.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -422,8 +430,8 @@ fn features_empty() {
 #[cargo_test]
 fn features_multiple_occurrences() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/features_multiple_occurrences.in");
+    let project = Project::from_template("tests/snapshots/add/features_multiple_occurrences.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -444,7 +452,8 @@ fn features_multiple_occurrences() {
 #[cargo_test]
 fn features_preserve() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_preserve.in");
+    let project = Project::from_template("tests/snapshots/add/features_preserve.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -462,7 +471,8 @@ fn features_preserve() {
 #[cargo_test]
 fn features_spaced_values() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_spaced_values.in");
+    let project = Project::from_template("tests/snapshots/add/features_spaced_values.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -483,7 +493,8 @@ fn features_spaced_values() {
 #[cargo_test]
 fn features_unknown() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/features_unknown.in");
+    let project = Project::from_template("tests/snapshots/add/features_unknown.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -501,7 +512,8 @@ fn features_unknown() {
 #[cargo_test]
 fn git() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git.in");
+    let project = Project::from_template("tests/snapshots/add/git.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -528,7 +540,8 @@ fn git() {
 #[cargo_test]
 fn git_inferred_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_inferred_name.in");
+    let project = Project::from_template("tests/snapshots/add/git_inferred_name.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -555,7 +568,8 @@ fn git_inferred_name() {
 #[cargo_test]
 fn git_inferred_name_multiple() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_inferred_name_multiple.in");
+    let project = Project::from_template("tests/snapshots/add/git_inferred_name_multiple.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -590,7 +604,8 @@ fn git_inferred_name_multiple() {
 #[cargo_test]
 fn git_normalized_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_normalized_name.in");
+    let project = Project::from_template("tests/snapshots/add/git_normalized_name.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -617,7 +632,8 @@ fn git_normalized_name() {
 #[cargo_test]
 fn invalid_git_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_git_name.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_git_name.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -644,7 +660,8 @@ fn invalid_git_name() {
 #[cargo_test]
 fn git_branch() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_branch.in");
+    let project = Project::from_template("tests/snapshots/add/git_branch.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
         project
@@ -674,7 +691,8 @@ fn git_branch() {
 #[cargo_test]
 fn git_conflicts_namever() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_conflicts_namever.in");
+    let project = Project::from_template("tests/snapshots/add/git_conflicts_namever.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -699,7 +717,8 @@ fn git_conflicts_namever() {
 #[cargo_test]
 fn git_registry() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_registry.in");
+    let project = Project::from_template("tests/snapshots/add/git_registry.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("versioned-package", |project| {
         project
@@ -732,7 +751,8 @@ fn git_registry() {
 #[cargo_test]
 fn git_dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_dev.in");
+    let project = Project::from_template("tests/snapshots/add/git_dev.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -759,7 +779,8 @@ fn git_dev() {
 #[cargo_test]
 fn git_rev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_rev.in");
+    let project = Project::from_template("tests/snapshots/add/git_rev.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
         project
@@ -788,7 +809,8 @@ fn git_rev() {
 #[cargo_test]
 fn git_tag() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_tag.in");
+    let project = Project::from_template("tests/snapshots/add/git_tag.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let (git_dep, git_repo) = cargo_test_support::git::new_repo("git-package", |project| {
         project
@@ -817,7 +839,8 @@ fn git_tag() {
 #[cargo_test]
 fn path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path.in");
+    let project = Project::from_template("tests/snapshots/add/path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -839,7 +862,8 @@ fn path() {
 #[cargo_test]
 fn path_inferred_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path_inferred_name.in");
+    let project = Project::from_template("tests/snapshots/add/path_inferred_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -861,8 +885,9 @@ fn path_inferred_name() {
 #[cargo_test]
 fn path_inferred_name_conflicts_full_feature() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/path_inferred_name_conflicts_full_feature.in");
+    let project =
+        Project::from_template("tests/snapshots/add/path_inferred_name_conflicts_full_feature.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -885,7 +910,8 @@ fn path_inferred_name_conflicts_full_feature() {
 #[cargo_test]
 fn path_normalized_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path_normalized_name.in");
+    let project = Project::from_template("tests/snapshots/add/path_normalized_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -910,7 +936,8 @@ fn path_normalized_name() {
 #[cargo_test]
 fn invalid_path_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_path_name.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -928,7 +955,8 @@ fn invalid_path_name() {
 #[cargo_test]
 fn path_dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/path_dev.in");
+    let project = Project::from_template("tests/snapshots/add/path_dev.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -951,7 +979,8 @@ fn path_dev() {
 #[cargo_test]
 fn invalid_arg() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_arg.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_arg.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -969,7 +998,8 @@ fn invalid_arg() {
 #[cargo_test]
 fn invalid_git_external() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_git_external.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_git_external.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_url = url::Url::from_directory_path(cwd.join("does-not-exist"))
         .unwrap()
@@ -993,7 +1023,8 @@ fn invalid_git_external() {
 #[cargo_test]
 fn invalid_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_path.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1015,7 +1046,8 @@ fn invalid_path() {
 #[cargo_test]
 fn invalid_path_self() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_path_self.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_path_self.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1033,7 +1065,8 @@ fn invalid_path_self() {
 #[cargo_test]
 fn invalid_manifest() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_manifest.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_manifest.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1051,7 +1084,8 @@ fn invalid_manifest() {
 #[cargo_test]
 fn invalid_name_external() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_name_external.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_name_external.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1072,7 +1106,8 @@ fn invalid_name_external() {
 #[cargo_test]
 fn invalid_target_empty() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_target_empty.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_target_empty.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1093,7 +1128,8 @@ fn invalid_target_empty() {
 #[cargo_test]
 fn invalid_vers() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/invalid_vers.in");
+    let project = Project::from_template("tests/snapshots/add/invalid_vers.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1111,7 +1147,8 @@ fn invalid_vers() {
 #[cargo_test]
 fn list_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/list_features.in");
+    let project = Project::from_template("tests/snapshots/add/list_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1129,7 +1166,8 @@ fn list_features() {
 #[cargo_test]
 fn list_features_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/list_features_path.in");
+    let project = Project::from_template("tests/snapshots/add/list_features_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -1147,8 +1185,8 @@ fn list_features_path() {
 #[cargo_test]
 fn list_features_path_no_default() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/list_features_path_no_default.in");
+    let project = Project::from_template("tests/snapshots/add/list_features_path_no_default.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -1174,7 +1212,8 @@ fn list_features_path_no_default() {
 #[cargo_test]
 fn manifest_path_package() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/manifest_path_package.in");
+    let project = Project::from_template("tests/snapshots/add/manifest_path_package.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1201,8 +1240,8 @@ fn manifest_path_package() {
 #[cargo_test]
 fn multiple_conflicts_with_features() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/multiple_conflicts_with_features.in");
+    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1223,7 +1262,8 @@ fn multiple_conflicts_with_features() {
 #[cargo_test]
 fn git_multiple_names() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/git_multiple_names.in");
+    let project = Project::from_template("tests/snapshots/add/git_multiple_names.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("git-package", |project| {
         project
@@ -1255,8 +1295,8 @@ fn git_multiple_names() {
 #[cargo_test]
 fn multiple_conflicts_with_rename() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/multiple_conflicts_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1277,7 +1317,8 @@ fn multiple_conflicts_with_rename() {
 #[cargo_test]
 fn namever() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/namever.in");
+    let project = Project::from_template("tests/snapshots/add/namever.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1295,7 +1336,8 @@ fn namever() {
 #[cargo_test]
 fn no_args() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/no_args.in");
+    let project = Project::from_template("tests/snapshots/add/no_args.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1312,7 +1354,8 @@ fn no_args() {
 #[cargo_test]
 fn no_default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/no_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/no_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1330,7 +1373,8 @@ fn no_default_features() {
 #[cargo_test]
 fn no_optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/no_optional.in");
+    let project = Project::from_template("tests/snapshots/add/no_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1348,7 +1392,8 @@ fn no_optional() {
 #[cargo_test]
 fn optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/optional.in");
+    let project = Project::from_template("tests/snapshots/add/optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1366,7 +1411,8 @@ fn optional() {
 #[cargo_test]
 fn overwrite_default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1387,9 +1433,10 @@ fn overwrite_default_features() {
 #[cargo_test]
 fn overwrite_default_features_with_no_default_features() {
     init_registry();
-    let project_root = project_from_template(
+    let project = Project::from_template(
         "tests/snapshots/add/overwrite_default_features_with_no_default_features.in",
     );
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1414,7 +1461,8 @@ fn overwrite_default_features_with_no_default_features() {
 #[cargo_test]
 fn overwrite_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1432,7 +1480,8 @@ fn overwrite_features() {
 #[cargo_test]
 fn overwrite_git_with_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_git_with_path.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_git_with_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -1457,7 +1506,8 @@ fn overwrite_git_with_path() {
 #[cargo_test]
 fn overwrite_inline_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_inline_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_inline_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1484,7 +1534,8 @@ fn overwrite_inline_features() {
 #[cargo_test]
 fn overwrite_name_dev_noop() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_name_dev_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_name_dev_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1505,7 +1556,8 @@ fn overwrite_name_dev_noop() {
 #[cargo_test]
 fn overwrite_name_noop() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_name_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_name_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1523,8 +1575,8 @@ fn overwrite_name_noop() {
 #[cargo_test]
 fn overwrite_no_default_features() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_no_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_no_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1545,9 +1597,10 @@ fn overwrite_no_default_features() {
 #[cargo_test]
 fn overwrite_no_default_features_with_default_features() {
     init_registry();
-    let project_root = project_from_template(
+    let project = Project::from_template(
         "tests/snapshots/add/overwrite_no_default_features_with_default_features.in",
     );
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1572,7 +1625,8 @@ fn overwrite_no_default_features_with_default_features() {
 #[cargo_test]
 fn overwrite_no_optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_no_optional.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_no_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1593,8 +1647,9 @@ fn overwrite_no_optional() {
 #[cargo_test]
 fn overwrite_no_optional_with_optional() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_no_optional_with_optional.in");
+    let project =
+        Project::from_template("tests/snapshots/add/overwrite_no_optional_with_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1615,7 +1670,8 @@ fn overwrite_no_optional_with_optional() {
 #[cargo_test]
 fn overwrite_optional() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_optional.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1633,8 +1689,9 @@ fn overwrite_optional() {
 #[cargo_test]
 fn overwrite_optional_with_no_optional() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_optional_with_no_optional.in");
+    let project =
+        Project::from_template("tests/snapshots/add/overwrite_optional_with_no_optional.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1655,7 +1712,8 @@ fn overwrite_optional_with_no_optional() {
 #[cargo_test]
 fn overwrite_path_noop() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_path_noop.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_path_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1673,7 +1731,8 @@ fn overwrite_path_noop() {
 #[cargo_test]
 fn overwrite_path_with_version() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_path_with_version.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_path_with_version.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -1694,8 +1753,8 @@ fn overwrite_path_with_version() {
 #[cargo_test]
 fn overwrite_rename_with_no_rename() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_rename_with_no_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_no_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1716,7 +1775,8 @@ fn overwrite_rename_with_no_rename() {
 #[cargo_test]
 fn overwrite_rename_with_rename() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_rename_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_rename_with_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1737,7 +1797,8 @@ fn overwrite_rename_with_rename() {
 #[cargo_test]
 fn change_rename_target() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/change_rename_target.in");
+    let project = Project::from_template("tests/snapshots/add/change_rename_target.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1758,8 +1819,9 @@ fn change_rename_target() {
 #[cargo_test]
 fn overwrite_rename_with_rename_noop() {
     init_registry();
-    let project_root =
-        project_from_template("tests/snapshots/add/overwrite_rename_with_rename_noop.in");
+    let project =
+        Project::from_template("tests/snapshots/add/overwrite_rename_with_rename_noop.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1780,7 +1842,8 @@ fn overwrite_rename_with_rename_noop() {
 #[cargo_test]
 fn overwrite_version_with_git() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_version_with_git.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_git.in");
+    let project_root = project.root();
     let cwd = &project_root;
     let git_dep = cargo_test_support::git::new("versioned-package", |project| {
         project
@@ -1810,7 +1873,8 @@ fn overwrite_version_with_git() {
 #[cargo_test]
 fn overwrite_version_with_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_version_with_path.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_version_with_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -1835,7 +1899,8 @@ fn overwrite_version_with_path() {
 #[cargo_test]
 fn overwrite_with_rename() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/overwrite_with_rename.in");
+    let project = Project::from_template("tests/snapshots/add/overwrite_with_rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1856,7 +1921,8 @@ fn overwrite_with_rename() {
 #[cargo_test]
 fn preserve_sorted() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/preserve_sorted.in");
+    let project = Project::from_template("tests/snapshots/add/preserve_sorted.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1874,7 +1940,8 @@ fn preserve_sorted() {
 #[cargo_test]
 fn preserve_unsorted() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/preserve_unsorted.in");
+    let project = Project::from_template("tests/snapshots/add/preserve_unsorted.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1892,7 +1959,8 @@ fn preserve_unsorted() {
 #[cargo_test]
 fn registry() {
     init_alt_registry();
-    let project_root = project_from_template("tests/snapshots/add/registry.in");
+    let project = Project::from_template("tests/snapshots/add/registry.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1910,7 +1978,8 @@ fn registry() {
 #[cargo_test]
 fn rename() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/rename.in");
+    let project = Project::from_template("tests/snapshots/add/rename.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1928,7 +1997,8 @@ fn rename() {
 #[cargo_test]
 fn target() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/target.in");
+    let project = Project::from_template("tests/snapshots/add/target.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1951,7 +2021,8 @@ fn target() {
 #[cargo_test]
 fn target_cfg() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/target_cfg.in");
+    let project = Project::from_template("tests/snapshots/add/target_cfg.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1969,7 +2040,8 @@ fn target_cfg() {
 #[cargo_test]
 fn vers() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/vers.in");
+    let project = Project::from_template("tests/snapshots/add/vers.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -1987,7 +2059,8 @@ fn vers() {
 #[cargo_test]
 fn workspace_path() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/workspace_path.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_path.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -2009,7 +2082,8 @@ fn workspace_path() {
 #[cargo_test]
 fn workspace_path_dev() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/workspace_path_dev.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_path_dev.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -2032,7 +2106,8 @@ fn workspace_path_dev() {
 #[cargo_test]
 fn workspace_name() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/workspace_name.in");
+    let project = Project::from_template("tests/snapshots/add/workspace_name.in");
+    let project_root = project.root();
     let cwd = project_root.join("primary");
 
     cargo_command()
@@ -2050,7 +2125,8 @@ fn workspace_name() {
 #[cargo_test]
 fn deprecated_default_features() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/deprecated_default_features.in");
+    let project = Project::from_template("tests/snapshots/add/deprecated_default_features.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
@@ -2071,7 +2147,8 @@ fn deprecated_default_features() {
 #[cargo_test]
 fn deprecated_section() {
     init_registry();
-    let project_root = project_from_template("tests/snapshots/add/deprecated_section.in");
+    let project = Project::from_template("tests/snapshots/add/deprecated_section.in");
+    let project_root = project.root();
     let cwd = &project_root;
 
     cargo_command()
