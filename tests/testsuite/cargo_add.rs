@@ -1,13 +1,6 @@
-use cargo_test_support::cargo_exe;
 use cargo_test_support::compare::assert;
 use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
-
-pub fn cargo_command() -> snapbox::cmd::Command {
-    snapbox::cmd::Command::new(cargo_exe())
-        .with_assert(assert())
-        .test_env()
-}
 
 fn init_registry() {
     cargo_test_support::registry::init();
@@ -99,7 +92,7 @@ fn add_basic() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package"])
         .current_dir(cwd)
@@ -118,7 +111,7 @@ fn add_multiple() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2"])
         .current_dir(cwd)
@@ -137,7 +130,7 @@ fn quiet() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--quiet", "your-face"])
         .current_dir(cwd)
@@ -156,7 +149,7 @@ fn add_normalized_name_external() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["linked_hash_map", "Inflector"])
         .current_dir(cwd)
@@ -178,7 +171,7 @@ fn infer_prerelease() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["prerelease_only"])
         .current_dir(cwd)
@@ -197,7 +190,7 @@ fn build() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--build", "my-build-package1", "my-build-package2"])
         .current_dir(cwd)
@@ -216,7 +209,7 @@ fn build_prefer_existing_version() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["cargo-list-test-fixture-dependency", "--build"])
         .current_dir(cwd)
@@ -238,7 +231,7 @@ fn default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--default-features"])
         .current_dir(cwd)
@@ -257,7 +250,7 @@ fn require_weak() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--no-optional"])
         .current_dir(cwd)
@@ -276,7 +269,7 @@ fn dev() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--dev", "my-dev-package1", "my-dev-package2"])
         .current_dir(cwd)
@@ -295,7 +288,7 @@ fn dev_build_conflict() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package", "--dev", "--build"])
         .current_dir(cwd)
@@ -314,7 +307,7 @@ fn dev_prefer_existing_version() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["cargo-list-test-fixture-dependency", "--dev"])
         .current_dir(cwd)
@@ -336,7 +329,7 @@ fn dry_run() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package", "--dry-run"])
         .current_dir(cwd)
@@ -355,7 +348,7 @@ fn features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--features", "eyes"])
         .current_dir(cwd)
@@ -374,7 +367,7 @@ fn features_empty() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--features", ""])
         .current_dir(cwd)
@@ -393,7 +386,7 @@ fn features_multiple_occurrences() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--features", "eyes", "--features", "nose"])
         .current_dir(cwd)
@@ -415,7 +408,7 @@ fn features_preserve() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face"])
         .current_dir(cwd)
@@ -434,7 +427,7 @@ fn features_spaced_values() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--features", "eyes nose"])
         .current_dir(cwd)
@@ -456,7 +449,7 @@ fn features_unknown() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--features", "noze"])
         .current_dir(cwd)
@@ -484,7 +477,7 @@ fn git() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url])
         .current_dir(cwd)
@@ -512,7 +505,7 @@ fn git_inferred_name() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--git", &git_url])
         .current_dir(cwd)
@@ -545,7 +538,7 @@ fn git_inferred_name_multiple() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--git", &git_url])
         .current_dir(cwd)
@@ -576,7 +569,7 @@ fn git_normalized_name() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git_package", "--git", &git_url])
         .current_dir(cwd)
@@ -604,7 +597,7 @@ fn invalid_git_name() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["not-in-git", "--git", &git_url])
         .current_dir(cwd)
@@ -635,7 +628,7 @@ fn git_branch() {
     git_repo.branch(branch, &find_head(), false).unwrap();
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--branch", branch])
         .current_dir(cwd)
@@ -654,7 +647,7 @@ fn git_conflicts_namever() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "my-package@0.4.3",
@@ -689,7 +682,7 @@ fn git_registry() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "versioned-package",
@@ -723,7 +716,7 @@ fn git_dev() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--dev"])
         .current_dir(cwd)
@@ -753,7 +746,7 @@ fn git_rev() {
     let head = find_head().id().to_string();
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--rev", &head])
         .current_dir(cwd)
@@ -783,7 +776,7 @@ fn git_tag() {
     cargo_test_support::git::tag(&git_repo, tag);
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["git-package", "--git", &git_url, "--tag", tag])
         .current_dir(cwd)
@@ -802,7 +795,7 @@ fn path() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -825,7 +818,7 @@ fn path_inferred_name() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -849,7 +842,7 @@ fn path_inferred_name_conflicts_full_feature() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["--path", "../dependency", "--features", "your-face/nose"])
         .current_dir(&cwd)
@@ -873,7 +866,7 @@ fn path_normalized_name() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo_list_test_fixture_dependency",
@@ -899,7 +892,7 @@ fn invalid_path_name() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["not-at-path", "--path", "../dependency"])
         .current_dir(&cwd)
@@ -918,7 +911,7 @@ fn path_dev() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -942,7 +935,7 @@ fn invalid_arg() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package", "--flag"])
         .current_dir(cwd)
@@ -964,7 +957,7 @@ fn invalid_git_external() {
         .unwrap()
         .to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["fake-git", "--git", &git_url])
         .current_dir(cwd)
@@ -986,7 +979,7 @@ fn invalid_path() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture",
@@ -1009,7 +1002,7 @@ fn invalid_path_self() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["cargo-list-test-fixture", "--path", "."])
         .current_dir(cwd)
@@ -1028,7 +1021,7 @@ fn invalid_manifest() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package"])
         .current_dir(cwd)
@@ -1047,7 +1040,7 @@ fn invalid_name_external() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["lets_hope_nobody_ever_publishes_this_crate"])
         .current_dir(cwd)
@@ -1069,7 +1062,7 @@ fn invalid_target_empty() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package", "--target", ""])
         .current_dir(cwd)
@@ -1091,7 +1084,7 @@ fn invalid_vers() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package@invalid version string"])
         .current_dir(cwd)
@@ -1110,7 +1103,7 @@ fn list_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face"])
         .current_dir(cwd)
@@ -1129,7 +1122,7 @@ fn list_features_path() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--path", "../dependency"])
         .current_dir(&cwd)
@@ -1148,7 +1141,7 @@ fn list_features_path_no_default() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "your-face",
@@ -1175,7 +1168,7 @@ fn manifest_path_package() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "--manifest-path",
@@ -1203,7 +1196,7 @@ fn multiple_conflicts_with_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "your-face", "--features", "nose"])
         .current_dir(cwd)
@@ -1239,7 +1232,7 @@ fn git_multiple_names() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2", "--git", &git_url])
         .current_dir(cwd)
@@ -1258,7 +1251,7 @@ fn multiple_conflicts_with_rename() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2", "--rename", "renamed"])
         .current_dir(cwd)
@@ -1280,7 +1273,7 @@ fn namever() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1@>=0.1.1", "my-package2@0.2.3", "my-package"])
         .current_dir(cwd)
@@ -1299,7 +1292,7 @@ fn no_args() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .current_dir(cwd)
         .assert()
@@ -1317,7 +1310,7 @@ fn no_default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
         .current_dir(cwd)
@@ -1336,7 +1329,7 @@ fn no_optional() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
         .current_dir(cwd)
@@ -1355,7 +1348,7 @@ fn optional() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--optional"])
         .current_dir(cwd)
@@ -1374,7 +1367,7 @@ fn overwrite_default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--default-features"])
         .current_dir(cwd)
@@ -1398,7 +1391,7 @@ fn overwrite_default_features_with_no_default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
         .current_dir(cwd)
@@ -1424,7 +1417,7 @@ fn overwrite_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--features", "nose"])
         .current_dir(cwd)
@@ -1443,7 +1436,7 @@ fn overwrite_git_with_path() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -1469,7 +1462,7 @@ fn overwrite_inline_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "unrelateed-crate",
@@ -1497,7 +1490,7 @@ fn overwrite_name_dev_noop() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--dev"])
         .current_dir(cwd)
@@ -1519,7 +1512,7 @@ fn overwrite_name_noop() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face"])
         .current_dir(cwd)
@@ -1538,7 +1531,7 @@ fn overwrite_no_default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--no-default-features"])
         .current_dir(cwd)
@@ -1562,7 +1555,7 @@ fn overwrite_no_default_features_with_default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--default-features"])
         .current_dir(cwd)
@@ -1588,7 +1581,7 @@ fn overwrite_no_optional() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
         .current_dir(cwd)
@@ -1611,7 +1604,7 @@ fn overwrite_no_optional_with_optional() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--optional"])
         .current_dir(cwd)
@@ -1633,7 +1626,7 @@ fn overwrite_optional() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--optional"])
         .current_dir(cwd)
@@ -1653,7 +1646,7 @@ fn overwrite_optional_with_no_optional() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2@0.4.1", "--no-optional"])
         .current_dir(cwd)
@@ -1675,7 +1668,7 @@ fn overwrite_path_noop() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["your-face", "--path", "./dependency"])
         .current_dir(cwd)
@@ -1694,7 +1687,7 @@ fn overwrite_path_with_version() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["cargo-list-test-fixture-dependency@20.0"])
         .current_dir(&cwd)
@@ -1716,7 +1709,7 @@ fn overwrite_rename_with_no_rename() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["versioned-package"])
         .current_dir(cwd)
@@ -1738,7 +1731,7 @@ fn overwrite_rename_with_rename() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["versioned-package", "--rename", "a2"])
         .current_dir(cwd)
@@ -1760,7 +1753,7 @@ fn change_rename_target() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package2", "--rename", "some-package"])
         .current_dir(cwd)
@@ -1783,7 +1776,7 @@ fn overwrite_rename_with_rename_noop() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["versioned-package", "--rename", "a1"])
         .current_dir(cwd)
@@ -1814,7 +1807,7 @@ fn overwrite_version_with_git() {
     });
     let git_url = git_dep.url().to_string();
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["versioned-package", "--git", &git_url])
         .current_dir(cwd)
@@ -1836,7 +1829,7 @@ fn overwrite_version_with_path() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -1862,7 +1855,7 @@ fn overwrite_with_rename() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["versioned-package", "--rename", "renamed"])
         .current_dir(cwd)
@@ -1884,7 +1877,7 @@ fn preserve_sorted() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["toml"])
         .current_dir(cwd)
@@ -1903,7 +1896,7 @@ fn preserve_unsorted() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["toml"])
         .current_dir(cwd)
@@ -1922,7 +1915,7 @@ fn registry() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2", "--registry", "alternative"])
         .current_dir(cwd)
@@ -1941,7 +1934,7 @@ fn rename() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package", "--rename", "renamed"])
         .current_dir(cwd)
@@ -1960,7 +1953,7 @@ fn target() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "my-package1",
@@ -1984,7 +1977,7 @@ fn target_cfg() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package1", "my-package2", "--target", "cfg(unix)"])
         .current_dir(cwd)
@@ -2003,7 +1996,7 @@ fn vers() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package@>=0.1.1"])
         .current_dir(cwd)
@@ -2022,7 +2015,7 @@ fn workspace_path() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -2045,7 +2038,7 @@ fn workspace_path_dev() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args([
             "cargo-list-test-fixture-dependency",
@@ -2069,7 +2062,7 @@ fn workspace_name() {
     let project_root = project.root();
     let cwd = project_root.join("primary");
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["cargo-list-test-fixture-dependency"])
         .current_dir(&cwd)
@@ -2088,7 +2081,7 @@ fn deprecated_default_features() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package"])
         .current_dir(&cwd)
@@ -2110,7 +2103,7 @@ fn deprecated_section() {
     let project_root = project.root();
     let cwd = &project_root;
 
-    cargo_command()
+    snapbox::cmd::Command::cargo()
         .arg("add")
         .args(["my-package"])
         .current_dir(&cwd)
