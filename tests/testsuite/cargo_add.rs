@@ -1169,6 +1169,28 @@ fn manifest_path_package() {
 }
 
 #[cargo_test]
+fn merge_activated_features() {
+    let project = Project::from_template("tests/snapshots/add/merge_activated_features.in");
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/merge_activated_features.stdout")
+        .stderr_matches_path("tests/snapshots/add/merge_activated_features.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/merge_activated_features.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn multiple_conflicts_with_features() {
     init_registry();
     let project = Project::from_template("tests/snapshots/add/multiple_conflicts_with_features.in");
@@ -2017,6 +2039,28 @@ fn target_cfg() {
         .stderr_matches_path("tests/snapshots/add/target_cfg.stderr");
 
     assert().subset_matches("tests/snapshots/add/target_cfg.out", &project_root);
+}
+
+#[cargo_test]
+fn unknown_inherited_feature() {
+    let project = Project::from_template("tests/snapshots/add/unknown_inherited_feature.in");
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .failure()
+        .stdout_matches_path("tests/snapshots/add/unknown_inherited_feature.stdout")
+        .stderr_matches_path("tests/snapshots/add/unknown_inherited_feature.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/unknown_inherited_feature.out",
+        &project_root,
+    );
 }
 
 #[cargo_test]
