@@ -1455,6 +1455,74 @@ fn overwrite_inline_features() {
 }
 
 #[cargo_test]
+fn overwrite_inherit_features_noop() {
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_features_noop.in");
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_features_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_features_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_noop() {
+    init_registry();
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_noop.in");
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
+fn overwrite_inherit_optional_noop() {
+    init_registry();
+    let project = Project::from_template("tests/snapshots/add/overwrite_inherit_optional_noop.in");
+    let project_root = project.root();
+    let cwd = &project_root;
+
+    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo()
+        .arg("add")
+        .args(["foo", "-p", "bar"])
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stdout")
+        .stderr_matches_path("tests/snapshots/add/overwrite_inherit_optional_noop.stderr");
+
+    assert().subset_matches(
+        "tests/snapshots/add/overwrite_inherit_optional_noop.out",
+        &project_root,
+    );
+}
+
+#[cargo_test]
 fn overwrite_name_dev_noop() {
     init_alt_registry();
     let project = Project::from_template("tests/snapshots/add/overwrite_name_dev_noop.in");
