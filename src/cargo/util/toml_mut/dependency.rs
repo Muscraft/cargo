@@ -1,5 +1,7 @@
 //! Information about dependencies in a manifest.
 
+use anyhow::bail;
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -59,7 +61,12 @@ impl Dependency {
 
     /// Set dependency to a given version.
     pub fn set_source(mut self, source: impl Into<Source>) -> Self {
-        self.source = Some(source.into());
+        let source = source.into();
+        if let Source::Workspace(_) = source {
+            self.default_features = None;
+            self.rename = None;
+        }
+        self.source = Some(source);
         self
     }
 
@@ -105,15 +112,26 @@ impl Dependency {
 
     /// Set the value of default-features for the dependency.
     #[allow(dead_code)]
-    pub fn set_default_features(mut self, default_features: bool) -> Self {
-        self.default_features = Some(default_features);
-        self
+    pub fn set_default_features(mut self, default_features: bool) -> CargoResult<Self> {
+        if let Some(Source::Workspace(_)) = self.source {
+            bail!(invalid_source_for_set(
+                "default-features",
+                "WorkspaceSource"
+            ))
+        } else {
+            self.default_features = Some(default_features);
+            Ok(self)
+        }
     }
 
     /// Set the alias for the dependency.
-    pub fn set_rename(mut self, rename: &str) -> Self {
-        self.rename = Some(rename.into());
-        self
+    pub fn set_rename(mut self, rename: &str) -> CargoResult<Self> {
+        if let Some(Source::Workspace(_)) = self.source {
+            bail!(invalid_source_for_set("rename", "WorkspaceSource"))
+        } else {
+            self.rename = Some(rename.into());
+            Ok(self)
+        }
     }
 
     /// Set the value of registry for the dependency.
@@ -564,9 +582,19 @@ impl Dependency {
                     })
                     .unwrap_or_default();
                 features.extend(new_features.iter().map(|s| s.as_str()));
-                let features = toml_edit::value(features.into_iter().collect::<toml_edit::Value>());
-                table.set_dotted(false);
-                table.insert("features", features);
+                if let Some(inherit_features) = &self.inherited_features {
+                    inherit_features.iter().for_each(|f| {
+                        features.remove(f.as_str());
+                    });
+                }
+                if !features.is_empty() {
+                    let features =
+                        toml_edit::value(features.into_iter().collect::<toml_edit::Value>());
+                    table.set_dotted(false);
+                    table.insert("features", features);
+                } else {
+                    table.remove("features");
+                }
             } else {
                 table.remove("features");
             }
@@ -589,6 +617,12 @@ impl Dependency {
 
 fn invalid_type(dep: &str, key: &str, actual: &str, expected: &str) -> anyhow::Error {
     anyhow::format_err!("Found {actual} for {key} when {expected} was expected for {dep}")
+}
+
+fn invalid_source_for_set(field: &str, source: &str) -> anyhow::Error {
+    anyhow::format_err!(
+        "you cannot set `{field}` when the `Source` for the `Dependency` is a `{source}`"
+    )
 }
 
 impl std::fmt::Display for Dependency {
@@ -912,8 +946,23 @@ mod tests {
 
     use crate::util::toml_mut::manifest::LocalManifest;
     use cargo_util::paths;
+    use toml_edit::{Document, Key};
 
     use super::*;
+
+    #[test]
+    fn error_using_set_method() {
+        // default-features
+        Dependency::new("dep")
+            .set_source(WorkspaceSource::new())
+            .set_default_features(false)
+            .expect_err("expected error, found");
+        // rename
+        Dependency::new("dep")
+            .set_source(WorkspaceSource::new())
+            .set_default_features(false)
+            .expect_err("expected error, found");
+    }
 
     #[test]
     fn to_toml_simple_dep() {
@@ -967,7 +1016,8 @@ mod tests {
             paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("/")));
         let dep = Dependency::new("dep")
             .set_source(RegistrySource::new("1.0"))
-            .set_default_features(false);
+            .set_default_features(false)
+            .unwrap();
         let key = dep.toml_key();
         let item = dep.to_toml(&crate_root);
 
@@ -1023,7 +1073,8 @@ mod tests {
             paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("/")));
         let dep = Dependency::new("dep")
             .set_source(RegistrySource::new("1.0"))
-            .set_rename("d");
+            .set_rename("d")
+            .unwrap();
         let key = dep.toml_key();
         let item = dep.to_toml(&crate_root);
 
@@ -1062,7 +1113,9 @@ mod tests {
         let dep = Dependency::new("dep")
             .set_source(RegistrySource::new("1.0"))
             .set_default_features(false)
-            .set_rename("d");
+            .unwrap()
+            .set_rename("d")
+            .unwrap();
         let key = dep.toml_key();
         let item = dep.to_toml(&crate_root);
 
@@ -1074,6 +1127,51 @@ mod tests {
         assert_eq!(dep.get("version").unwrap().as_str(), Some("1.0"));
         assert_eq!(dep.get("default-features").unwrap().as_bool(), Some(false));
 
+        verify_roundtrip(&crate_root, key, &item);
+    }
+
+    #[test]
+    fn update_source_to_workspace_simple() {
+        let crate_root =
+            paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("/")));
+        let dep = Dependency::new("dep")
+            .set_source(RegistrySource::new("1.0"))
+            .set_default_features(true)
+            .unwrap()
+            .set_rename("d")
+            .unwrap();
+        let key = dep.toml_key();
+        let item = dep.to_toml(&crate_root);
+
+        assert_eq!(key, "d".to_owned());
+        assert!(item.is_inline_table());
+
+        let dep_table = item.as_inline_table().unwrap();
+        assert_eq!(dep_table.get("package").unwrap().as_str(), Some("dep"));
+        assert_eq!(dep_table.get("version").unwrap().as_str(), Some("1.0"));
+        assert_eq!(
+            dep_table.get("default-features").unwrap().as_bool(),
+            Some(true)
+        );
+
+        let dep = dep.clone().set_source(WorkspaceSource::new());
+        let key = dep.toml_key();
+        let mut key_mut = Key::new(key);
+        let mut dep_item = item.clone();
+        dep.update_toml(&crate_root, &mut key_mut.as_mut(), &mut dep_item);
+
+        assert_eq!(key, "dep".to_owned());
+        assert!(str_or_1_len_table(&dep_item));
+        let dep_table = dep_item.as_inline_table().unwrap();
+        assert!(dep_table.get("package").is_none());
+        assert!(dep_table.get("version").is_none());
+        assert!(dep_table.get("default-features").is_none());
+        assert_eq!(dep_table.get("workspace").unwrap().as_bool(), Some(true));
+        assert!(dep_table.is_dotted());
+
+        let mut doc = Document::new();
+        doc.insert(key_mut.get(), dep_item);
+        assert_eq!(doc.to_string(), "dep.workspace = true\n");
         verify_roundtrip(&crate_root, key, &item);
     }
 

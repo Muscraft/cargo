@@ -276,23 +276,6 @@ impl LocalManifest {
 
     /// Write changes back to the file.
     pub fn write(&self) -> CargoResult<()> {
-        if !self.manifest.data.contains_key("package")
-            && !self.manifest.data.contains_key("project")
-        {
-            if self.manifest.data.contains_key("workspace") {
-                anyhow::bail!(
-                    "found virtual manifest at {}, but this command requires running against an \
-                         actual package in this workspace.",
-                    self.path.display()
-                );
-            } else {
-                anyhow::bail!(
-                    "missing expected `package` or `project` fields in {}",
-                    self.path.display()
-                );
-            }
-        }
-
         let s = self.manifest.data.to_string();
         let new_contents_bytes = s.as_bytes();
 
