@@ -1150,6 +1150,7 @@ pub struct TomlWorkspace {
     default_members: Option<Vec<String>>,
     exclude: Option<Vec<String>>,
     resolver: Option<String>,
+    nested: Option<Nested>,
 
     // Properties that can be inherited by members.
     package: Option<InheritableFields>,
@@ -1158,6 +1159,57 @@ pub struct TomlWorkspace {
     // Note that this field must come last due to the way toml serialization
     // works which requires tables to be emitted after all values.
     metadata: Option<toml::Value>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(untagged)]
+pub enum Nested {
+    Simple(bool),
+    Detailed(DetailedNested),
+}
+
+impl<'de> de::Deserialize<'de> for Nested {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = Nested;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("expected a boolean or an inline table")
+            }
+
+            fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                if v {
+                    Ok(Nested::Simple(true))
+                } else {
+                    Err(de::Error::custom("`false` is not an allowed value"))
+                }
+            }
+
+            fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+            where
+                A: de::MapAccess<'de>,
+            {
+                let mvd = de::value::MapAccessDeserializer::new(map);
+                DetailedNested::deserialize(mvd).map(Nested::Detailed)
+            }
+        }
+
+        deserializer.deserialize_any(Visitor)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DetailedNested {
+    path: Option<String>,
+    optional: Option<bool>,
 }
 
 /// A group of fields that are inheritable by members of the workspace
