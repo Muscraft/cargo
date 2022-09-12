@@ -121,15 +121,20 @@ pub enum WorkspaceConfig {
     /// optionally specified as well.
     Root(WorkspaceRootConfig),
 
+    Nested(WorkspaceNestedConfig),
+
     /// Indicates that `[workspace]` was present and the `root` field is the
     /// optional value of `package.workspace`, if present.
-    Member { root: Option<String> },
+    Member {
+        root: Option<String>,
+    },
 }
 
 impl WorkspaceConfig {
     pub fn inheritable(&self) -> Option<&InheritableFields> {
         match self {
             WorkspaceConfig::Root(root) => Some(&root.inheritable_fields),
+            WorkspaceConfig::Nested(nested) => Some(&nested.inherit),
             WorkspaceConfig::Member { .. } => None,
         }
     }
@@ -141,13 +146,31 @@ impl WorkspaceConfig {
     /// * `self_path` is the path of the manifest this `WorkspaceConfig` is located.
     /// * `look_from` is the path where discovery started (usually the current
     ///   working directory), used for `workspace.exclude` checking.
-    fn get_ws_root(&self, self_path: &Path, look_from: &Path) -> Option<PathBuf> {
+    fn get_ws_root(
+        &self,
+        self_path: &Path,
+        look_from: &Path,
+        for_inherit: bool,
+    ) -> Option<PathBuf> {
         match self {
             WorkspaceConfig::Root(ances_root_config) => {
                 debug!("find_root - found a root checking exclusion");
                 if !ances_root_config.is_excluded(look_from) {
                     debug!("find_root - found!");
                     Some(self_path.to_owned())
+                } else {
+                    None
+                }
+            }
+            WorkspaceConfig::Nested(nested) => {
+                let path = if for_inherit {
+                    self_path.to_path_buf()
+                } else {
+                    nested.parent.clone()
+                };
+
+                if !nested.is_excluded(look_from) {
+                    Some(path)
                 } else {
                     None
                 }
@@ -175,6 +198,55 @@ pub struct WorkspaceRootConfig {
     exclude: Vec<String>,
     inheritable_fields: InheritableFields,
     custom_metadata: Option<toml::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WorkspaceNestedConfig {
+    root_dir: PathBuf,
+    members: Option<Vec<String>>,
+    exclude: Vec<String>,
+    inherit: InheritableFields,
+    parent: PathBuf,
+}
+
+impl WorkspaceNestedConfig {
+    pub fn new(
+        root_dir: &Path,
+        members: &Option<Vec<String>>,
+        exclude: &Option<Vec<String>>,
+        inherit: &Option<InheritableFields>,
+        parent: PathBuf,
+    ) -> Self {
+        Self {
+            root_dir: root_dir.to_path_buf(),
+            members: members.clone(),
+            exclude: exclude.clone().unwrap_or_default(),
+            inherit: inherit.clone().unwrap_or_default(),
+            parent,
+        }
+    }
+    /// Checks the path against the `excluded` list.
+    ///
+    /// This method does **not** consider the `members` list.
+    fn is_excluded(&self, manifest_path: &Path) -> bool {
+        let excluded = self
+            .exclude
+            .iter()
+            .any(|ex| manifest_path.starts_with(self.root_dir.join(ex)));
+
+        let explicit_member = match self.members {
+            Some(ref members) => members
+                .iter()
+                .any(|mem| manifest_path.starts_with(self.root_dir.join(mem))),
+            None => false,
+        };
+
+        !explicit_member && excluded
+    }
+
+    pub fn inheritable(&self) -> &InheritableFields {
+        &self.inherit
+    }
 }
 
 impl<'cfg> Workspace<'cfg> {
@@ -619,19 +691,27 @@ impl<'cfg> Workspace<'cfg> {
         let current = self.packages.load(manifest_path)?;
         match current
             .workspace_config()
-            .get_ws_root(manifest_path, manifest_path)
+            .get_ws_root(manifest_path, manifest_path, false)
         {
-            Some(root_path) => {
-                debug!("find_root - is root {}", manifest_path.display());
-                Ok(Some(root_path))
+            Some(maybe_root_path) => {
+                let maybe_root = self.packages.load(&maybe_root_path)?;
+                // if the config is for a nested workspace we must find the true workspace
+                if let WorkspaceConfig::Nested { .. } = maybe_root.workspace_config() {
+                    self.find_root(&maybe_root_path)
+                } else {
+                    debug!("find_root - is root {}", manifest_path.display());
+                    Ok(Some(maybe_root_path))
+                }
             }
-            None => find_workspace_root_with_loader(manifest_path, self.config, |self_path| {
-                Ok(self
-                    .packages
-                    .load(self_path)?
-                    .workspace_config()
-                    .get_ws_root(self_path, manifest_path))
-            }),
+            None => {
+                find_workspace_root_with_loader(manifest_path, self.config, false, |self_path| {
+                    Ok(self
+                        .packages
+                        .load(self_path)?
+                        .workspace_config()
+                        .get_ws_root(self_path, manifest_path, false))
+                })
+            }
         }
     }
 
@@ -931,6 +1011,7 @@ impl<'cfg> Workspace<'cfg> {
             MaybePackage::Package(ref p) => {
                 let has_members_list = match *p.manifest().workspace_config() {
                     WorkspaceConfig::Root(ref root_config) => root_config.has_members_list(),
+                    WorkspaceConfig::Nested { .. } => false,
                     WorkspaceConfig::Member { .. } => unreachable!(),
                 };
                 if !has_members_list {
@@ -1679,14 +1760,18 @@ pub fn resolve_relative_path(
 }
 
 /// Finds the path of the root of the workspace.
-pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult<Option<PathBuf>> {
-    find_workspace_root_with_loader(manifest_path, config, |self_path| {
+pub fn find_workspace_root(
+    manifest_path: &Path,
+    config: &Config,
+    for_inherit: bool,
+) -> CargoResult<Option<PathBuf>> {
+    find_workspace_root_with_loader(manifest_path, config, for_inherit, |self_path| {
         let key = self_path.parent().unwrap();
         let source_id = SourceId::for_path(key)?;
         let (manifest, _nested_paths) = read_manifest(self_path, source_id, config)?;
         Ok(manifest
             .workspace_config()
-            .get_ws_root(self_path, manifest_path))
+            .get_ws_root(self_path, manifest_path, for_inherit))
     })
 }
 
@@ -1697,6 +1782,7 @@ pub fn find_workspace_root(manifest_path: &Path, config: &Config) -> CargoResult
 fn find_workspace_root_with_loader(
     manifest_path: &Path,
     config: &Config,
+    for_inherit: bool,
     mut loader: impl FnMut(&Path) -> CargoResult<Option<PathBuf>>,
 ) -> CargoResult<Option<PathBuf>> {
     // Check if there are any workspace roots that have already been found that would work
@@ -1706,9 +1792,21 @@ fn find_workspace_root_with_loader(
         // root. Note we skip the first item since that is just the path itself
         for current in manifest_path.ancestors().skip(1) {
             if let Some(ws_config) = roots.get(current) {
-                if !ws_config.is_excluded(manifest_path) {
-                    // Add `Cargo.toml` since ws_root is the root and not the file
-                    return Ok(Some(current.join("Cargo.toml")));
+                match ws_config {
+                    WorkspaceConfig::Root(root) => {
+                        if !root.is_excluded(manifest_path) {
+                            // Add `Cargo.toml` since ws_root is the root and not the file
+                            return Ok(Some(current.join("Cargo.toml")));
+                        }
+                    }
+                    WorkspaceConfig::Nested(nested) => {
+                        // a nested workspace can only be the "root" when finding
+                        // inheritable fields
+                        if for_inherit && !nested.is_excluded(manifest_path) {
+                            return Ok(Some(current.join("Cargo.toml")));
+                        }
+                    }
+                    WorkspaceConfig::Member { .. } => unreachable!(),
                 }
             }
         }

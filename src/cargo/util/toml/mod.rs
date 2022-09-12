@@ -25,7 +25,10 @@ use crate::core::{
     find_workspace_root, resolve_relative_path, Dependency, Manifest, PackageId, Summary, Target,
 };
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
-use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
+use crate::core::{
+    GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceNestedConfig,
+    WorkspaceRootConfig,
+};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
@@ -1208,8 +1211,8 @@ impl<'de> de::Deserialize<'de> for Nested {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct DetailedNested {
-    path: Option<String>,
-    optional: Option<bool>,
+    pub path: Option<String>,
+    pub optional: Option<bool>,
 }
 
 /// A group of fields that are inheritable by members of the workspace
@@ -1631,6 +1634,7 @@ impl TomlManifest {
         ) -> CargoResult<InheritableFields> {
             match workspace_config {
                 WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+                WorkspaceConfig::Nested(nested) => Ok(nested.inheritable().clone()),
                 WorkspaceConfig::Member {
                     root: Some(ref path_to_root),
                 } => {
@@ -1643,7 +1647,7 @@ impl TomlManifest {
                     inheritable_from_path(config, root_path)
                 }
                 WorkspaceConfig::Member { root: None } => {
-                    match find_workspace_root(&resolved_path, config)? {
+                    match find_workspace_root(&resolved_path, config, true)? {
                         Some(path_to_root) => inheritable_from_path(config, path_to_root),
                         None => Err(anyhow!("failed to find a workspace root")),
                     }
@@ -1663,24 +1667,43 @@ impl TomlManifest {
         let project = me.project.clone().or_else(|| me.package.clone());
         let project = &mut project.ok_or_else(|| anyhow!("no `package` section found"))?;
 
+        let resolved_path = package_root.join("Cargo.toml");
+
         let workspace_config = match (me.workspace.as_ref(), project.workspace.as_ref()) {
             (Some(toml_config), None) => {
+                let nested = is_nested(&toml_config.nested, &resolved_path, config)?;
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(package_root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                let ws_root_config = WorkspaceRootConfig::new(
-                    package_root,
-                    &toml_config.members,
-                    &toml_config.default_members,
-                    &toml_config.exclude,
-                    &Some(inheritable),
-                    &toml_config.metadata,
-                );
+
+                let ws_config = match nested {
+                    Some(path) => {
+                        let ws_nested = WorkspaceNestedConfig::new(
+                            package_root,
+                            &toml_config.members,
+                            &toml_config.exclude,
+                            &Some(inheritable),
+                            path,
+                        );
+                        WorkspaceConfig::Nested(ws_nested)
+                    }
+                    None => {
+                        let ws_root_config = WorkspaceRootConfig::new(
+                            package_root,
+                            &toml_config.members,
+                            &toml_config.default_members,
+                            &toml_config.exclude,
+                            &Some(inheritable),
+                            &toml_config.metadata,
+                        );
+                        WorkspaceConfig::Root(ws_root_config)
+                    }
+                };
                 config
                     .ws_roots
                     .borrow_mut()
-                    .insert(package_root.to_path_buf(), ws_root_config.clone());
-                WorkspaceConfig::Root(ws_root_config)
+                    .insert(package_root.to_path_buf(), ws_config.clone());
+                ws_config
             }
             (None, root) => WorkspaceConfig::Member {
                 root: root.cloned(),
@@ -1697,8 +1720,6 @@ impl TomlManifest {
         }
 
         validate_package_name(package_name, "package name", "")?;
-
-        let resolved_path = package_root.join("Cargo.toml");
 
         let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
         let inherit =
@@ -2315,22 +2336,38 @@ impl TomlManifest {
             .transpose()?;
         let workspace_config = match me.workspace {
             Some(ref toml_config) => {
+                let nested = is_nested(&toml_config.nested, &root.join("Cargo.toml"), config)?;
                 let mut inheritable = toml_config.package.clone().unwrap_or_default();
                 inheritable.update_ws_path(root.to_path_buf());
                 inheritable.update_deps(toml_config.dependencies.clone());
-                let ws_root_config = WorkspaceRootConfig::new(
-                    root,
-                    &toml_config.members,
-                    &toml_config.default_members,
-                    &toml_config.exclude,
-                    &Some(inheritable),
-                    &toml_config.metadata,
-                );
+                let ws_config = match nested {
+                    Some(path) => {
+                        let ws_nested = WorkspaceNestedConfig::new(
+                            root,
+                            &toml_config.members,
+                            &toml_config.exclude,
+                            &Some(inheritable),
+                            path,
+                        );
+                        WorkspaceConfig::Nested(ws_nested)
+                    }
+                    None => {
+                        let ws_root_config = WorkspaceRootConfig::new(
+                            root,
+                            &toml_config.members,
+                            &toml_config.default_members,
+                            &toml_config.exclude,
+                            &Some(inheritable),
+                            &toml_config.metadata,
+                        );
+                        WorkspaceConfig::Root(ws_root_config)
+                    }
+                };
                 config
                     .ws_roots
                     .borrow_mut()
-                    .insert(root.to_path_buf(), ws_root_config.clone());
-                WorkspaceConfig::Root(ws_root_config)
+                    .insert(root.to_path_buf(), ws_config.clone());
+                ws_config
             }
             None => {
                 bail!("virtual manifests must be configured with [workspace]");
@@ -2445,6 +2482,54 @@ impl TomlManifest {
     }
 }
 
+fn is_nested(
+    nested: &Option<Nested>,
+    manifest_path: &PathBuf,
+    config: &Config,
+) -> CargoResult<Option<PathBuf>> {
+    fn parent_ws_error(path: &Path) -> CargoResult<Option<PathBuf>> {
+        bail!(
+            "workspace at {} is supposed to be nested but no parent workspace could be found",
+            path.display()
+        )
+    }
+    let out = match nested {
+        Some(Nested::Simple(true)) => match find_workspace_root(manifest_path, config, false)? {
+            None => parent_ws_error(manifest_path)?,
+            Some(path) => Some(path),
+        },
+        Some(Nested::Detailed(detailed)) => {
+            let has_root = match &detailed.path {
+                Some(path) => {
+                    let parent_path = manifest_path.parent().unwrap().join(path);
+                    if parent_path.join("Cargo.toml").exists() {
+                        let source_id = SourceId::for_path(&parent_path)?;
+                        let (man, _) =
+                            read_manifest(&parent_path.join("Cargo.toml"), source_id, config)?;
+                        match man.workspace_config() {
+                            WorkspaceConfig::Root(_) => Some(parent_path.join("Cargo.toml")),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    }
+                }
+                None => find_workspace_root(&manifest_path, &config, false)?,
+            };
+            match (detailed.optional.unwrap_or(false), has_root) {
+                // Requires parent and one doesnt exist
+                (false, None) => parent_ws_error(manifest_path)?,
+                // Doesn't require a parent and one does not exist
+                (true, None) => None,
+                // A parent workspace exists
+                (_, Some(path)) => Some(path),
+            }
+        }
+        _ => None,
+    };
+    Ok(out)
+}
+
 fn inheritable_from_path(
     config: &Config,
     workspace_path: PathBuf,
@@ -2455,19 +2540,14 @@ fn inheritable_from_path(
     // Let the borrow exit scope so that it can be picked up if there is a need to
     // read a manifest
     if let Some(ws_root) = config.ws_roots.borrow().get(workspace_path_root) {
-        return Ok(ws_root.inheritable().clone());
+        return Ok(ws_root.inheritable().unwrap().clone());
     };
 
     let source_id = SourceId::for_path(workspace_path_root)?;
     let (man, _) = read_manifest(&workspace_path, source_id, config)?;
     match man.workspace_config() {
-        WorkspaceConfig::Root(root) => {
-            config
-                .ws_roots
-                .borrow_mut()
-                .insert(workspace_path, root.clone());
-            Ok(root.inheritable().clone())
-        }
+        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        WorkspaceConfig::Nested(nested) => Ok(nested.inheritable().clone()),
         _ => bail!(
             "root of a workspace inferred but wasn't a root: {}",
             workspace_path.display()

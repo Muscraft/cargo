@@ -68,7 +68,7 @@ use std::time::Instant;
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
 use crate::core::shell::Verbosity;
-use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
+use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceConfig};
 use crate::ops;
 use crate::util::errors::CargoResult;
 use crate::util::toml as cargo_toml;
@@ -203,7 +203,7 @@ pub struct Config {
     /// consider using `ConfigBuilder::enable_nightly_features` instead.
     pub nightly_features_allowed: bool,
     /// WorkspaceRootConfigs that have been found
-    pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
+    pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceConfig>>,
 }
 
 impl Config {
