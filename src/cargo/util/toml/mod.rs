@@ -33,10 +33,11 @@ use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, VersionReqExt,
 };
 
+mod single_file_package;
 mod targets;
 use self::targets::targets;
 
-/// Loads a `Cargo.toml` from a file on disk.
+/// Loads a `Cargo.toml` or a single-file package (`<file>.rs`) from a file on disk.
 ///
 /// This could result in a real or virtual manifest being returned.
 ///
@@ -54,7 +55,14 @@ pub fn read_manifest(
         path.display(),
         source_id
     );
-    let contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+
+    // If we are dealing with a single-file package we need to extract the manifest
+    // and use what we extracted as the contents to parse.
+    if let Some("rs") = path.extension().and_then(|e| e.to_str()) {
+        contents = single_file_package::extract_manifest(&contents, path, config)
+            .map_err(|err| ManifestError::new(err, path.into()))?;
+    }
 
     read_manifest_from_str(&contents, path, source_id, config)
         .with_context(|| format!("failed to parse manifest at `{}`", path.display()))

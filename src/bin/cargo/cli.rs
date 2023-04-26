@@ -389,7 +389,7 @@ fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatch
 
     // If the command is a rust file treat it like a single-file package
     if cmd.ends_with(".rs") {
-        return commands::script::exec(config, subcommand_args);
+        return commands::script::exec(cmd, config, subcommand_args);
     }
 
     let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];

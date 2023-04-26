@@ -1,19 +1,51 @@
 //! Tests for `cargo <file>.rs`
 
 use cargo_test_support::project;
+use cargo_test_support::registry::Package;
 
 #[cargo_test]
 fn permit_command() {
     let p = project()
         .file(
             "file.rs",
-            r#"
+            "\
 #!/usr/bin/env cargo
 
 fn main() {
-    println!("Hello World");
+    println!(\"Hello, world!\");
 }
-            "#,
+            ",
+        )
+        .build();
+
+    p.cargo("-Z unstable-options file.rs")
+        .masquerade_as_nightly_cargo(&["cargo-script"])
+        .run();
+}
+
+#[cargo_test]
+fn script_with_manifest_deps() {
+    Package::new("baz", "1.0.0")
+        .file(
+            "src/lib.rs",
+            "pub fn hello_world() { println!(\"Hello, world!\"); }",
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "file.rs",
+            "\
+#!/usr/bin/env cargo
+
+//! ```cargo
+//! [dependencies]
+//! baz = \"1.0.0\"
+//! ```
+fn main() {
+    baz::hello_world();
+}
+            ",
         )
         .build();
 
@@ -27,13 +59,13 @@ fn requires_nightly() {
     let p = project()
         .file(
             "file.rs",
-            r#"
+            "\
 #!/usr/bin/env cargo
 
 fn main() {
-    println!("Hello World");
+    println!(\"Hello, world!\");
 }
-            "#,
+            ",
         )
         .build();
 
@@ -55,13 +87,13 @@ fn requires_unstable_options() {
     let p = project()
         .file(
             "file.rs",
-            r#"
+            "\
 #!/usr/bin/env cargo
 
 fn main() {
-    println!("Hello World");
+    println!(\"Hello, world!\");
 }
-            "#,
+            ",
         )
         .build();
 
