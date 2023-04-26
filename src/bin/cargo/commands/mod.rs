@@ -117,6 +117,7 @@ pub mod report;
 pub mod run;
 pub mod rustc;
 pub mod rustdoc;
+pub mod script;
 pub mod search;
 pub mod test;
 pub mod tree;

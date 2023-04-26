@@ -1486,6 +1486,46 @@ version = "0.1.0"
 workspace = true
 ```
 
+## `cargo <file>.rs`
+
+* Pre-RFC: [cargo-script](https://internals.rust-lang.org/t/pre-rfc-cargo-script-for-everyone/18639/)
+
+This adds support for so called single-file packages in `cargo`. Single-file packages are `.rs` files
+with an embedded manifest. These will be accepted with just like `Cargo.toml` files with `--manifest-path`.
+`cargo` will be modified to accept `cargo <file>.rs` as a short-cut to `cargo run --manifest-path <file>.rs`.
+This allows placing `cargo` in a `#!` line for directly running these files.
+
+Example:
+```rust
+#!/usr/bin/env cargo
+
+//! ```cargo
+//! [dependencies]
+//! clap = { version = "4.2", features = ["derive"] }
+//! ```
+
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(version)]
+struct Args {
+    #[clap(short, long, help = "Path to config")]
+    config: Option<std::path::PathBuf>,
+}
+
+fn main() {
+    let args = Args::parse();
+    println!("{:?}", args);
+}
+```
+```console
+$ ./prog --config file.toml
+Args { config: Some("file.toml") }
+```
+
+See [`cargo-script-mvs`](https://crates.io/crates/cargo-script-mvs) for a demo.
+
+
 ## Stabilized and removed features
 
 ### Compile progress
