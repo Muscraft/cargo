@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fmt::Write;
+use std::path::Path;
 
 use super::commands;
 use super::list_commands;
@@ -294,7 +295,7 @@ To pass the arguments to the subcommand, remove `--`",
                 // Currently this is only a warning, but after a transition period this will become
                 // a hard error.
                 if super::builtin_aliases_execs(cmd).is_none() {
-                    if let Some(path) = super::find_external_subcommand(config, cmd) {
+                    if let Ok(path) = super::find_external_subcommand(config, cmd) {
                         config.shell().warn(format!(
                         "\
 user-defined alias `{}` is shadowing an external subcommand found at: `{}`
@@ -382,24 +383,39 @@ fn config_configure(
     Ok(())
 }
 
+/// Precedence of command resolution:
+/// 1. Ends with `.rs` or looks like a path with many components
+/// 2. Built in subcommands
+/// 3. External subcommands
+/// 4. Treat command as a single-file package
 fn execute_subcommand(config: &mut Config, cmd: &str, subcommand_args: &ArgMatches) -> CliResult {
+    // If the command is a rust file or looks like a path, treat it as a single-file package
+    if cmd.ends_with(".rs") || Path::new(cmd).components().count() > 1 {
+        return commands::single_file_package::exec(cmd, config, subcommand_args);
+    }
+
     if let Some(exec) = commands::builtin_exec(cmd) {
         return exec(config, subcommand_args);
     }
 
-    // If the command is a rust file treat it like a single-file package
-    if cmd.ends_with(".rs") {
-        return commands::script::exec(cmd, config, subcommand_args);
+    match super::find_external_subcommand(config, cmd) {
+        Ok(cmd_path) => {
+            let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
+            ext_args.extend(
+                subcommand_args
+                    .get_many::<OsString>("")
+                    .unwrap_or_default()
+                    .map(OsString::as_os_str),
+            );
+            super::execute_external_subcommand(config, cmd_path, &ext_args)
+        }
+        Err(external_subcommand_err) => {
+            match commands::single_file_package::single_file_path(cmd) {
+                Ok(_) => commands::single_file_package::exec(cmd, config, subcommand_args),
+                Err(_) => Err(CliError::new(external_subcommand_err, 101)),
+            }
+        }
     }
-
-    let mut ext_args: Vec<&OsStr> = vec![OsStr::new(cmd)];
-    ext_args.extend(
-        subcommand_args
-            .get_many::<OsString>("")
-            .unwrap_or_default()
-            .map(OsString::as_os_str),
-    );
-    super::execute_external_subcommand(config, cmd, &ext_args)
 }
 
 #[derive(Default)]

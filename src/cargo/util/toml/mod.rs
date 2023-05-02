@@ -59,7 +59,7 @@ pub fn read_manifest(
 
     // If we are dealing with a single-file package we need to extract the manifest
     // and use what we extracted as the contents to parse.
-    if let Some("rs") = path.extension().and_then(|e| e.to_str()) {
+    if Some("toml") != path.extension().and_then(|e| e.to_str()) {
         contents = single_file_package::extract_manifest(&contents, path, config)
             .map_err(|err| ManifestError::new(err, path.into()))?;
     }

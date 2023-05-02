@@ -30,9 +30,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                     )?;
                 }
                 None => {
+                    let cmd_path = crate::find_external_subcommand(config, subcommand)?;
                     crate::execute_external_subcommand(
                         config,
-                        subcommand,
+                        cmd_path,
                         &[OsStr::new(subcommand), OsStr::new("--help")],
                     )?;
                 }

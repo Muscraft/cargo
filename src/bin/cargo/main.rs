@@ -155,20 +155,14 @@ fn list_commands(config: &Config) -> BTreeMap<String, CommandInfo> {
     commands
 }
 
-fn find_external_subcommand(config: &Config, cmd: &str) -> Option<PathBuf> {
+fn find_external_subcommand(config: &Config, cmd: &str) -> CargoResult<PathBuf> {
     let command_exe = format!("cargo-{}{}", cmd, env::consts::EXE_SUFFIX);
     search_directories(config)
         .iter()
         .map(|dir| dir.join(&command_exe))
         .find(|file| is_executable(file))
-}
-
-fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> CliResult {
-    let path = find_external_subcommand(config, cmd);
-    let command = match path {
-        Some(command) => command,
-        None => {
-            let err = if cmd.starts_with('+') {
+        .ok_or_else(|| {
+            if cmd.starts_with('+') {
                 anyhow::format_err!(
                     "no such command: `{}`\n\n\t\
                     Cargo does not handle `+toolchain` directives.\n\t\
@@ -185,12 +179,12 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
                     cmd,
                     did_you_mean
                 )
-            };
+            }
+        })
+}
 
-            return Err(CliError::new(err, 101));
-        }
-    };
-    execute_subcommand(config, Some(&command), args)
+fn execute_external_subcommand(config: &Config, cmd_path: PathBuf, args: &[&OsStr]) -> CliResult {
+    execute_subcommand(config, Some(&cmd_path), args)
 }
 
 fn execute_internal_subcommand(config: &Config, args: &[&OsStr]) -> CliResult {

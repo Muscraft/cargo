@@ -1,4 +1,4 @@
 warning: `package.edition` is unspecified, defaulting to `2021`
-   Compiling file v0.0.0 ([ROOT]/case)
+   Compiling run v0.0.0 ([ROOT]/case/inner)
     Finished dev [unoptimized + debuginfo] target(s) in [..]
-     Running `target/debug/file --manifest-path [ROOT]/case/file.rs`
+     Running `inner/target/debug/run --manifest-path [ROOT]/case/inner/run`

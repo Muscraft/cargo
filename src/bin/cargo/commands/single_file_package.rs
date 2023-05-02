@@ -1,7 +1,9 @@
 use crate::command_prelude::*;
+use crate::is_executable;
 use cargo::core::{Verbosity, Workspace};
 use cargo::CargoResult;
 use cargo_util::ProcessError;
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 pub fn exec(path: &str, config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -9,7 +11,7 @@ pub fn exec(path: &str, config: &mut Config, args: &ArgMatches) -> CliResult {
         .cli_unstable()
         .fail_if_stable_command(config, "<file>.rs", 0)?;
 
-    let file_path = file_path(path)?;
+    let file_path = single_file_path(path)?;
     let ws = workspace(&file_path, config)?;
 
     let compile_opts = args.compile_options(
@@ -19,7 +21,11 @@ pub fn exec(path: &str, config: &mut Config, args: &ArgMatches) -> CliResult {
         ProfileChecking::Custom,
     )?;
 
-    cargo::ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| {
+    let mut args = values_os(args, "args");
+    args.insert(0, file_path.into_os_string());
+    args.insert(0, OsString::from("--manifest-path"));
+
+    cargo::ops::run(&ws, &compile_opts, &args).map_err(|err| {
         let proc_err = match err.downcast_ref::<ProcessError>() {
             Some(e) => e,
             None => return CliError::new(err, 101),
@@ -44,9 +50,9 @@ pub fn exec(path: &str, config: &mut Config, args: &ArgMatches) -> CliResult {
     })
 }
 
-fn file_path(cmd: &str) -> CargoResult<PathBuf> {
+pub fn single_file_path(cmd: &str) -> CargoResult<PathBuf> {
     let path = dunce::canonicalize(PathBuf::from(cmd))?;
-    if path.exists() {
+    if path.exists() && is_executable(&path) {
         Ok(path)
     } else {
         anyhow::bail!("single-file package `{}` does not exist", path.display())

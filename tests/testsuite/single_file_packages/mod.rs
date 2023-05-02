@@ -1,7 +1,10 @@
+mod no_extension;
 mod permit_command;
 mod requires_nightly;
 mod requires_unstable_options;
 mod script_with_deps;
+mod shadows_run;
+mod shadows_run_path_components_priority;
 
 fn init_registry() {
     cargo_test_support::registry::init();
