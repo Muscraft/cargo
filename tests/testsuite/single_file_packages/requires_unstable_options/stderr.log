@@ -1,0 +1,2 @@
+error: the `cargo <file>.rs` command is unstable, pass `-Z unstable-options` to enable it
+See [..] for more information about the `cargo <file>.rs` command.

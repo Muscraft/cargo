@@ -1,0 +1,8 @@
+warning: `package.edition` is unspecified, defaulting to `2021`
+    Updating `dummy-registry` index
+ Downloading crates ...
+  Downloaded baz v1.0.0 (registry `dummy-registry`)
+   Compiling baz v1.0.0
+   Compiling file v0.0.0 ([ROOT]/case)
+    Finished dev [unoptimized + debuginfo] target(s) in [..]
+     Running `target/debug/file`

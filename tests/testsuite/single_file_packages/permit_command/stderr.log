@@ -1,0 +1,4 @@
+warning: `package.edition` is unspecified, defaulting to `2021`
+   Compiling file v0.0.0 ([ROOT]/case)
+    Finished dev [unoptimized + debuginfo] target(s) in [..]
+     Running `target/debug/file`
