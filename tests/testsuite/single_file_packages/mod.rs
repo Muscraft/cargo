@@ -1,3 +1,4 @@
+mod inner_block_comment;
 mod no_extension;
 mod permit_command;
 mod requires_nightly;

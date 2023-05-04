@@ -22,12 +22,27 @@ pub fn extract_manifest(s: &str, path: &std::path::Path, config: &Config) -> Car
     }
 
     let mut embedded_manifest = String::new();
-    for lit in lits {
-        // Remove leading and trailing whitespace
-        let value = lit.value().trim().to_string();
-        // Skip markdown code fences
-        if !value.starts_with("```") {
-            write!(&mut embedded_manifest, "{value}\n")?;
+    // /*! (Inner block doc comment) are treated as a single line
+    if lits.len() == 1 {
+        let lit = lits.first().unwrap();
+        // split it up so we can process each line
+        lit.value().split("\n").for_each(|s| {
+            // Remove leading comment section and surrounding whitespace
+            let s = s.trim_start_matches(" * ").trim();
+            // Skip markdown code fences and empty strings
+            if !s.contains("```") && !s.is_empty() {
+                writeln!(&mut embedded_manifest, "{s}").unwrap();
+            }
+        });
+    } else {
+        // //! (inner line doc comment) are treated as separate lines
+        for lit in lits {
+            let s = lit.value();
+            let s = s.trim();
+            // Skip markdown code fences and empty strings
+            if !s.contains("```") && !s.is_empty() {
+                writeln!(&mut embedded_manifest, "{s}").unwrap();
+            }
         }
     }
 
