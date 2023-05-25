@@ -1,4 +1,5 @@
 mod inner_block_comment;
+mod modify_bad_pkg_name;
 mod no_extension;
 mod permit_command;
 mod requires_nightly;

@@ -1,5 +1,6 @@
 use crate::core::Edition;
 use crate::util::config::Config;
+use crate::util::restricted_names;
 use crate::CargoResult;
 use std::fmt::Write;
 
@@ -162,6 +163,17 @@ fn package_name(path: &std::path::Path) -> CargoResult<String> {
                 slug.push('_');
             }
         }
+    }
+
+    // This copies the logic from `cargo new` to ensure that the name is valid,
+    // but it just modifies the name instead of throwing an error.
+    if restricted_names::is_keyword(&slug)
+        || restricted_names::is_conflicting_artifact_name(&slug)
+        || (cfg!(windows) && restricted_names::is_windows_reserved(&slug))
+        || &slug == "test"
+        || ["core", "std", "alloc", "proc_macro", "proc-macro"].contains(&slug.as_str())
+    {
+        slug.insert(0, '_');
     }
     Ok(slug)
 }

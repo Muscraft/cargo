@@ -1,0 +1,4 @@
+warning: `package.edition` is unspecified, defaulting to `2021`
+   Compiling _core v0.0.0 ([ROOT]/case)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.13s
+     Running `target/debug/_core --manifest-path [ROOT]/case/core.rs`
