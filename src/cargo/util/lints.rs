@@ -7,7 +7,15 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
-const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
+const LINT_GROUPS: &[LintGroup] = &[
+    CORRECTNESS,
+    NURSERY,
+    PEDANTIC,
+    RESTRICTION,
+    STYLE,
+    SUSPICIOUS,
+    TEST_DUMMY_UNSTABLE,
+];
 pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
 
 #[derive(Clone)]
@@ -67,6 +75,54 @@ pub struct LintGroup {
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
 }
+
+const CORRECTNESS: LintGroup = LintGroup {
+    name: "correctness",
+    desc: "code that is outright wrong or useless",
+    default_level: LintLevel::Deny,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const NURSERY: LintGroup = LintGroup {
+    name: "nursery",
+    desc: "new lints that are still under development",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const PEDANTIC: LintGroup = LintGroup {
+    name: "pedantic",
+    desc: "lints which are rather strict or have occasional false positives",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const RESTRICTION: LintGroup = LintGroup {
+    name: "restriction",
+    desc: "lints which prevent the use of language and library features",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const STYLE: LintGroup = LintGroup {
+    name: "style",
+    desc: "code that should be written in a more idiomatic wa",
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
+
+const SUSPICIOUS: LintGroup = LintGroup {
+    name: "suspicious",
+    desc: "code that is most likely wrong or useless",
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+};
 
 /// This lint group is only to be used for testing purposes
 const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
