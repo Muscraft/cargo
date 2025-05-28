@@ -73,7 +73,6 @@ pub struct LintGroup {
     pub name: &'static str,
     pub default_level: LintLevel,
     pub desc: &'static str,
-    pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
 }
 
@@ -81,7 +80,6 @@ const CORRECTNESS: LintGroup = LintGroup {
     name: "correctness",
     desc: "code that is outright wrong or useless",
     default_level: LintLevel::Deny,
-    edition_lint_opts: None,
     feature_gate: None,
 };
 
@@ -89,7 +87,6 @@ const NURSERY: LintGroup = LintGroup {
     name: "nursery",
     desc: "new lints that are still under development",
     default_level: LintLevel::Allow,
-    edition_lint_opts: None,
     feature_gate: None,
 };
 
@@ -97,7 +94,6 @@ const PEDANTIC: LintGroup = LintGroup {
     name: "pedantic",
     desc: "lints which are rather strict or have occasional false positives",
     default_level: LintLevel::Allow,
-    edition_lint_opts: None,
     feature_gate: None,
 };
 
@@ -105,7 +101,6 @@ const RESTRICTION: LintGroup = LintGroup {
     name: "restriction",
     desc: "lints which prevent the use of language and library features",
     default_level: LintLevel::Allow,
-    edition_lint_opts: None,
     feature_gate: None,
 };
 
@@ -113,7 +108,6 @@ const STYLE: LintGroup = LintGroup {
     name: "style",
     desc: "code that should be written in a more idiomatic wa",
     default_level: LintLevel::Warn,
-    edition_lint_opts: None,
     feature_gate: None,
 };
 
@@ -121,7 +115,6 @@ const SUSPICIOUS: LintGroup = LintGroup {
     name: "suspicious",
     desc: "code that is most likely wrong or useless",
     default_level: LintLevel::Warn,
-    edition_lint_opts: None,
     feature_gate: None,
 };
 
@@ -130,7 +123,6 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     name: "test_dummy_unstable",
     desc: "test_dummy_unstable is meant to only be used in tests",
     default_level: LintLevel::Allow,
-    edition_lint_opts: None,
     feature_gate: Some(Feature::test_dummy_unstable()),
 };
 
@@ -174,7 +166,7 @@ impl Lint {
         let group_level_priority = level_priority(
             self.primary_group.name,
             self.primary_group.default_level,
-            self.primary_group.edition_lint_opts,
+            None,
             pkg_lints,
             edition,
         );
@@ -393,12 +385,7 @@ fn find_lint_or_group<'a>(
             &lint.feature_gate,
         ))
     } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
-        Some((
-            group.name,
-            &group.default_level,
-            &group.edition_lint_opts,
-            &group.feature_gate,
-        ))
+        Some((group.name, &group.default_level, &None, &group.feature_gate))
     } else {
         None
     }
