@@ -139,7 +139,6 @@ pub struct Lint {
     pub name: &'static str,
     pub desc: &'static str,
     pub primary_group: &'static LintGroup,
-    pub default_level: LintLevel,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
     pub feature_gate: Option<&'static Feature>,
     /// This is a markdown formatted string that will be used when generating
@@ -166,7 +165,7 @@ impl Lint {
 
         let lint_level_priority = level_priority(
             self.name,
-            self.default_level,
+            self.primary_group.default_level,
             self.edition_lint_opts,
             pkg_lints,
             edition,
@@ -389,7 +388,7 @@ fn find_lint_or_group<'a>(
     if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
         Some((
             lint.name,
-            &lint.default_level,
+            &lint.primary_group.default_level,
             &lint.edition_lint_opts,
             &lint.feature_gate,
         ))
@@ -477,7 +476,6 @@ const IM_A_TEAPOT: Lint = Lint {
     name: "im_a_teapot",
     desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,
-    default_level: LintLevel::Allow,
     edition_lint_opts: None,
     feature_gate: Some(Feature::test_dummy_unstable()),
     docs: None,
@@ -529,7 +527,6 @@ const UNKNOWN_LINTS: Lint = Lint {
     name: "unknown_lints",
     desc: "unknown lint",
     primary_group: &SUSPICIOUS,
-    default_level: LintLevel::Warn,
     edition_lint_opts: None,
     feature_gate: None,
     docs: Some(
