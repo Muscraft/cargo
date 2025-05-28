@@ -8,7 +8,7 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
-const LINT_GROUPS: &[LintGroup] = &[
+pub const LINT_GROUPS: &[LintGroup] = &[
     CORRECTNESS,
     NURSERY,
     PEDANTIC,
@@ -74,6 +74,7 @@ pub struct LintGroup {
     pub default_level: LintLevel,
     pub desc: &'static str,
     pub feature_gate: Option<&'static Feature>,
+    pub hidden: bool,
 }
 
 const CORRECTNESS: LintGroup = LintGroup {
@@ -81,6 +82,7 @@ const CORRECTNESS: LintGroup = LintGroup {
     desc: "code that is outright wrong or useless",
     default_level: LintLevel::Deny,
     feature_gate: None,
+    hidden: false,
 };
 
 const NURSERY: LintGroup = LintGroup {
@@ -88,6 +90,7 @@ const NURSERY: LintGroup = LintGroup {
     desc: "new lints that are still under development",
     default_level: LintLevel::Allow,
     feature_gate: None,
+    hidden: false,
 };
 
 const PEDANTIC: LintGroup = LintGroup {
@@ -95,6 +98,7 @@ const PEDANTIC: LintGroup = LintGroup {
     desc: "lints which are rather strict or have occasional false positives",
     default_level: LintLevel::Allow,
     feature_gate: None,
+    hidden: false,
 };
 
 const RESTRICTION: LintGroup = LintGroup {
@@ -102,6 +106,7 @@ const RESTRICTION: LintGroup = LintGroup {
     desc: "lints which prevent the use of language and library features",
     default_level: LintLevel::Allow,
     feature_gate: None,
+    hidden: false,
 };
 
 const STYLE: LintGroup = LintGroup {
@@ -109,6 +114,7 @@ const STYLE: LintGroup = LintGroup {
     desc: "code that should be written in a more idiomatic wa",
     default_level: LintLevel::Warn,
     feature_gate: None,
+    hidden: false,
 };
 
 const SUSPICIOUS: LintGroup = LintGroup {
@@ -116,6 +122,7 @@ const SUSPICIOUS: LintGroup = LintGroup {
     desc: "code that is most likely wrong or useless",
     default_level: LintLevel::Warn,
     feature_gate: None,
+    hidden: false,
 };
 
 /// This lint group is only to be used for testing purposes
@@ -124,6 +131,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     desc: "test_dummy_unstable is meant to only be used in tests",
     default_level: LintLevel::Allow,
     feature_gate: Some(Feature::test_dummy_unstable()),
+    hidden: true,
 };
 
 #[derive(Copy, Clone, Debug)]
