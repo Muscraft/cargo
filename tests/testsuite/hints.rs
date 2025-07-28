@@ -323,3 +323,123 @@ fn mostly_unused_profile_overrides_hints_on_self_nightly() {
         .with_stderr_does_not_contain("-Zhint-mostly-unused")
         .run();
 }
+
+#[cargo_test(nightly, reason = "-Zhint-mostly-unused is unstable")]
+fn lint_global_mostly_unused() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [profile.dev]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] use of `hint-mostly-unused` in a global context
+ --> Cargo.toml:8:13
+  |
+7 |             [profile.dev]
+  |                      ---
+8 |             hint-mostly-unused = true
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::global_mostly_unused` is set to `warn` by default
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zhint-mostly-unused is unstable")]
+fn lint_global_mostly_unused_all_pkg_spec() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+
+            [profile.dev.package."*"]
+            hint-mostly-unused = true
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] use of `hint-mostly-unused` in a global context
+ --> Cargo.toml:8:13
+  |
+7 |             [profile.dev.package."*"]
+  |                                  ---
+8 |             hint-mostly-unused = true
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::global_mostly_unused` is set to `warn` by default
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "-Zhint-mostly-unused is unstable")]
+fn lint_global_mostly_unused_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["foo"]
+
+[profile.dev.package."*"]
+hint-mostly-unused = true
+"#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zprofile-hint-mostly-unused -v")
+        .masquerade_as_nightly_cargo(&["profile-hint-mostly-unused", "cargo-lints"])
+        .with_stderr_data(str![[r#"
+[WARNING] use of `hint-mostly-unused` in a global context
+ --> Cargo.toml:6:1
+  |
+5 | [profile.dev.package."*"]
+  |                      ---
+6 | hint-mostly-unused = true
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = [NOTE] `cargo::global_mostly_unused` is set to `warn` by default
+[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

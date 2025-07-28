@@ -1,14 +1,14 @@
-use crate::core::{Edition, Feature, Features, Manifest, Package};
+use crate::core::{Edition, Feature, Features, Manifest, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{Level, Snippet};
-use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
+use cargo_util_schemas::manifest::{ProfilePackageSpec, TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
+pub const LINTS: &[Lint] = &[GLOBAL_MOSTLY_UNUSED, IM_A_TEAPOT, UNKNOWN_LINTS];
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
@@ -464,6 +464,94 @@ pub fn check_im_a_teapot(
 
         gctx.shell().print_message(message)?;
     }
+    Ok(())
+}
+
+const GLOBAL_MOSTLY_UNUSED: Lint = Lint {
+    name: "global_mostly_unused",
+    desc: "global_mostly_unused lint",
+    groups: &[],
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+    docs: None,
+};
+
+pub fn global_mostly_unused(
+    maybe_pkg: &MaybePackage,
+    path: &Path,
+    pkg_lints: &TomlToolLints,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let (lint_level, reason) = GLOBAL_MOSTLY_UNUSED.level(
+        pkg_lints,
+        maybe_pkg.edition(),
+        maybe_pkg.unstable_features(),
+    );
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let level = lint_level.to_diagnostic_level();
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+    let emitted_reason = format!(
+        "`cargo::{}` is set to `{lint_level}` {reason}",
+        GLOBAL_MOSTLY_UNUSED.name
+    );
+    let mut paths = Vec::new();
+
+    if let Some(profiles) = maybe_pkg.profiles() {
+        for (profile_name, top_level_profile) in &profiles.0 {
+            if top_level_profile
+                .hint_mostly_unused
+                .is_some_and(|hint| hint)
+            {
+                paths.push(vec!["profile", profile_name.as_str(), "hint-mostly-unused"]);
+            }
+            if let Some(packages) = &top_level_profile.package {
+                for (pkg_profile_spec, toml_profile) in packages {
+                    if let ProfilePackageSpec::All = pkg_profile_spec
+                        && toml_profile.hint_mostly_unused.is_some_and(|hint| hint)
+                    {
+                        paths.push(vec![
+                            "profile",
+                            profile_name.as_str(),
+                            "package",
+                            "*",
+                            "hint-mostly-unused",
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+
+    for (i, path) in paths.iter().enumerate() {
+        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+            *error_count += 1;
+        }
+        let title = "use of `hint-mostly-unused` in a global context";
+        let key_span = get_span(maybe_pkg.document(), &path, false).unwrap();
+        let value_span = get_span(maybe_pkg.document(), &path, true).unwrap();
+        let parent_key_span =
+            get_span(maybe_pkg.document(), &path[..path.len() - 1], false).unwrap();
+        let mut message = level.title(title).snippet(
+            Snippet::source(maybe_pkg.contents())
+                .origin(&manifest_path)
+                .annotation(Level::Error.span(key_span.start..value_span.end))
+                .annotation(Level::Info.span(parent_key_span))
+                .fold(true),
+        );
+
+        if i == 0 {
+            message = message.footer(Level::Note.title(&emitted_reason));
+        }
+
+        gctx.shell().print_message(message)?;
+    }
+
     Ok(())
 }
 

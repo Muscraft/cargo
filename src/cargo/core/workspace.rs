@@ -25,7 +25,7 @@ use crate::util::context::FeatureUnification;
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lints::{analyze_cargo_lints_table, check_im_a_teapot};
+use crate::util::lints::{analyze_cargo_lints_table, check_im_a_teapot, global_mostly_unused};
 use crate::util::toml::{InheritableFields, read_manifest};
 use crate::util::{
     Filesystem, GlobalContext, IntoUrl, context::CargoResolverConfig, context::ConfigRelativePath,
@@ -1209,9 +1209,17 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_warnings(&self) -> CargoResult<()> {
         for (path, maybe_pkg) in &self.packages.packages {
+            if self.root_manifest() == path.as_path() {
+                if self.gctx.cli_unstable().cargo_lints
+                    || self.gctx.cli_unstable().profile_hint_mostly_unused
+                {
+                    self.emit_ws_lints()?;
+                }
+            }
+
             if let MaybePackage::Package(pkg) = maybe_pkg {
                 if self.gctx.cli_unstable().cargo_lints {
-                    self.emit_lints(pkg, &path)?
+                    self.emit_pkg_lints(pkg, &path)?
                 }
             }
             let warnings = match maybe_pkg {
@@ -1239,7 +1247,7 @@ impl<'gctx> Workspace<'gctx> {
         Ok(())
     }
 
-    pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+    pub fn emit_pkg_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
         let mut error_count = 0;
         let toml_lints = pkg
             .manifest()
@@ -1273,6 +1281,39 @@ impl<'gctx> Workspace<'gctx> {
             self.gctx,
         )?;
         check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
+
+        if error_count > 0 {
+            Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
+                "encountered {error_count} errors(s) while running lints"
+            ))
+            .into())
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn emit_ws_lints(&self) -> CargoResult<()> {
+        let mut error_count = 0;
+
+        let toml_lints = match self.root_maybe() {
+            MaybePackage::Package(pkg) => pkg.manifest().normalized_toml().lints.clone(),
+            MaybePackage::Virtual(vm) => vm.normalized_toml().lints.clone(),
+        }
+        .map(|lints| lints.lints)
+        .unwrap_or(manifest::TomlLints::default());
+        let cargo_lints = toml_lints
+            .get("cargo")
+            .cloned()
+            .unwrap_or(manifest::TomlToolLints::default());
+
+        global_mostly_unused(
+            self.root_maybe(),
+            self.root_manifest(),
+            &cargo_lints,
+            &mut error_count,
+            self.gctx,
+        )?;
+
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"
@@ -1877,6 +1918,40 @@ impl MaybePackage {
         match self {
             MaybePackage::Package(p) => p.manifest().is_embedded(),
             MaybePackage::Virtual(_) => false,
+        }
+    }
+
+    pub fn contents(&self) -> &str {
+        match self {
+            MaybePackage::Package(p) => p.manifest().contents(),
+            MaybePackage::Virtual(v) => v.contents(),
+        }
+    }
+
+    pub fn document(&self) -> &toml::Spanned<toml::de::DeTable<'static>> {
+        match self {
+            MaybePackage::Package(p) => p.manifest().document(),
+            MaybePackage::Virtual(v) => v.document(),
+        }
+    }
+    pub fn edition(&self) -> Edition {
+        match self {
+            MaybePackage::Package(p) => p.manifest().edition(),
+            MaybePackage::Virtual(_) => Edition::default(),
+        }
+    }
+
+    pub fn profiles(&self) -> Option<&TomlProfiles> {
+        match self {
+            MaybePackage::Package(p) => p.manifest().profiles(),
+            MaybePackage::Virtual(v) => v.profiles(),
+        }
+    }
+
+    pub fn unstable_features(&self) -> &Features {
+        match self {
+            MaybePackage::Package(p) => p.manifest().unstable_features(),
+            MaybePackage::Virtual(v) => v.unstable_features(),
         }
     }
 }
