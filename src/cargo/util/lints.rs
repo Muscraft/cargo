@@ -10,172 +10,6 @@ use std::path::Path;
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
 
-pub fn analyze_cargo_lints_table(
-    pkg: &Package,
-    path: &Path,
-    pkg_lints: &TomlToolLints,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &Path,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    let mut error_count = 0;
-    let manifest = pkg.manifest();
-    let manifest_path = rel_cwd_manifest_path(path, gctx);
-    let ws_path = rel_cwd_manifest_path(ws_path, gctx);
-    let mut unknown_lints = Vec::new();
-    for lint_name in pkg_lints.keys().map(|name| name) {
-        let Some((name, default_level, edition_lint_opts, feature_gate)) =
-            find_lint_or_group(lint_name)
-        else {
-            unknown_lints.push(lint_name);
-            continue;
-        };
-
-        let (_, reason, _) = level_priority(
-            name,
-            *default_level,
-            *edition_lint_opts,
-            pkg_lints,
-            manifest.edition(),
-        );
-
-        // Only run analysis on user-specified lints
-        if !reason.is_user_specified() {
-            continue;
-        }
-
-        // Only run this on lints that are gated by a feature
-        if let Some(feature_gate) = feature_gate {
-            verify_feature_enabled(
-                name,
-                feature_gate,
-                manifest,
-                &manifest_path,
-                ws_contents,
-                ws_document,
-                &ws_path,
-                &mut error_count,
-                gctx,
-            )?;
-        }
-    }
-
-    output_unknown_lints(
-        unknown_lints,
-        manifest,
-        &manifest_path,
-        pkg_lints,
-        ws_contents,
-        ws_document,
-        &ws_path,
-        &mut error_count,
-        gctx,
-    )?;
-
-    if error_count > 0 {
-        Err(anyhow::anyhow!(
-            "encountered {error_count} errors(s) while verifying lints",
-        ))
-    } else {
-        Ok(())
-    }
-}
-
-fn find_lint_or_group<'a>(
-    name: &str,
-) -> Option<(
-    &'static str,
-    &LintLevel,
-    &Option<(Edition, LintLevel)>,
-    &Option<&'static Feature>,
-)> {
-    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
-        Some((
-            lint.name,
-            &lint.default_level,
-            &lint.edition_lint_opts,
-            &lint.feature_gate,
-        ))
-    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
-        Some((
-            group.name,
-            &group.default_level,
-            &group.edition_lint_opts,
-            &group.feature_gate,
-        ))
-    } else {
-        None
-    }
-}
-
-fn verify_feature_enabled(
-    lint_name: &str,
-    feature_gate: &Feature,
-    manifest: &Manifest,
-    manifest_path: &str,
-    ws_contents: &str,
-    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
-    ws_path: &str,
-    error_count: &mut usize,
-    gctx: &GlobalContext,
-) -> CargoResult<()> {
-    if !manifest.unstable_features().is_enabled(feature_gate) {
-        let dash_feature_name = feature_gate.name().replace("_", "-");
-        let title = format!("use of unstable lint `{}`", lint_name);
-        let label = format!(
-            "this is behind `{}`, which is not enabled",
-            dash_feature_name
-        );
-        let second_title = format!("`cargo::{}` was inherited", lint_name);
-        let help = format!(
-            "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
-            dash_feature_name
-        );
-
-        let (contents, path, span) = if let Some(span) =
-            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
-        {
-            (manifest.contents(), manifest_path, span)
-        } else if let Some(lint_span) =
-            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
-        {
-            (ws_contents, ws_path, lint_span)
-        } else {
-            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
-        };
-
-        let mut report = Vec::new();
-        report.push(
-            Group::with_title(Level::ERROR.primary_title(title))
-                .element(
-                    Snippet::source(contents)
-                        .path(path)
-                        .annotation(AnnotationKind::Primary.span(span.key).label(label)),
-                )
-                .element(Level::HELP.message(help)),
-        );
-
-        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
-        {
-            report.push(
-                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
-                    Snippet::source(manifest.contents())
-                        .path(manifest_path)
-                        .annotation(
-                            AnnotationKind::Context
-                                .span(inherit_span.key.start..inherit_span.value.end),
-                        ),
-                ),
-            );
-        }
-
-        *error_count += 1;
-        gctx.shell().print_report(&report, true)?;
-    }
-    Ok(())
-}
-
 #[derive(Clone)]
 pub struct TomlSpan {
     pub key: Range<usize>,
@@ -418,6 +252,172 @@ fn level_priority(
     } else {
         (unspecified_level, reason, 0)
     }
+}
+
+pub fn analyze_cargo_lints_table(
+    pkg: &Package,
+    path: &Path,
+    pkg_lints: &TomlToolLints,
+    ws_contents: &str,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
+    ws_path: &Path,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let mut error_count = 0;
+    let manifest = pkg.manifest();
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+    let ws_path = rel_cwd_manifest_path(ws_path, gctx);
+    let mut unknown_lints = Vec::new();
+    for lint_name in pkg_lints.keys().map(|name| name) {
+        let Some((name, default_level, edition_lint_opts, feature_gate)) =
+            find_lint_or_group(lint_name)
+        else {
+            unknown_lints.push(lint_name);
+            continue;
+        };
+
+        let (_, reason, _) = level_priority(
+            name,
+            *default_level,
+            *edition_lint_opts,
+            pkg_lints,
+            manifest.edition(),
+        );
+
+        // Only run analysis on user-specified lints
+        if !reason.is_user_specified() {
+            continue;
+        }
+
+        // Only run this on lints that are gated by a feature
+        if let Some(feature_gate) = feature_gate {
+            verify_feature_enabled(
+                name,
+                feature_gate,
+                manifest,
+                &manifest_path,
+                ws_contents,
+                ws_document,
+                &ws_path,
+                &mut error_count,
+                gctx,
+            )?;
+        }
+    }
+
+    output_unknown_lints(
+        unknown_lints,
+        manifest,
+        &manifest_path,
+        pkg_lints,
+        ws_contents,
+        ws_document,
+        &ws_path,
+        &mut error_count,
+        gctx,
+    )?;
+
+    if error_count > 0 {
+        Err(anyhow::anyhow!(
+            "encountered {error_count} errors(s) while verifying lints",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn find_lint_or_group<'a>(
+    name: &str,
+) -> Option<(
+    &'static str,
+    &LintLevel,
+    &Option<(Edition, LintLevel)>,
+    &Option<&'static Feature>,
+)> {
+    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
+        Some((
+            lint.name,
+            &lint.default_level,
+            &lint.edition_lint_opts,
+            &lint.feature_gate,
+        ))
+    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
+        Some((
+            group.name,
+            &group.default_level,
+            &group.edition_lint_opts,
+            &group.feature_gate,
+        ))
+    } else {
+        None
+    }
+}
+
+fn verify_feature_enabled(
+    lint_name: &str,
+    feature_gate: &Feature,
+    manifest: &Manifest,
+    manifest_path: &str,
+    ws_contents: &str,
+    ws_document: &toml::Spanned<toml::de::DeTable<'static>>,
+    ws_path: &str,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    if !manifest.unstable_features().is_enabled(feature_gate) {
+        let dash_feature_name = feature_gate.name().replace("_", "-");
+        let title = format!("use of unstable lint `{}`", lint_name);
+        let label = format!(
+            "this is behind `{}`, which is not enabled",
+            dash_feature_name
+        );
+        let second_title = format!("`cargo::{}` was inherited", lint_name);
+        let help = format!(
+            "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
+            dash_feature_name
+        );
+
+        let (contents, path, span) = if let Some(span) =
+            get_key_value_span(manifest.document(), &["lints", "cargo", lint_name])
+        {
+            (manifest.contents(), manifest_path, span)
+        } else if let Some(lint_span) =
+            get_key_value_span(ws_document, &["workspace", "lints", "cargo", lint_name])
+        {
+            (ws_contents, ws_path, lint_span)
+        } else {
+            panic!("could not find `cargo::{lint_name}` in `[lints]`, or `[workspace.lints]` ")
+        };
+
+        let mut report = Vec::new();
+        report.push(
+            Group::with_title(Level::ERROR.primary_title(title))
+                .element(
+                    Snippet::source(contents)
+                        .path(path)
+                        .annotation(AnnotationKind::Primary.span(span.key).label(label)),
+                )
+                .element(Level::HELP.message(help)),
+        );
+
+        if let Some(inherit_span) = get_key_value_span(manifest.document(), &["lints", "workspace"])
+        {
+            report.push(
+                Group::with_title(Level::NOTE.secondary_title(second_title)).element(
+                    Snippet::source(manifest.contents())
+                        .path(manifest_path)
+                        .annotation(
+                            AnnotationKind::Context
+                                .span(inherit_span.key.start..inherit_span.value.end),
+                        ),
+                ),
+            );
+        }
+
+        *error_count += 1;
+        gctx.shell().print_report(&report, false)?;
+    }
+    Ok(())
 }
 
 /// This lint is only to be used for testing purposes
