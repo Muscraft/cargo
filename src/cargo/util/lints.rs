@@ -1,4 +1,5 @@
-use crate::core::{Edition, Feature, Features, Manifest, Package};
+use crate::core::features::CliUnstableFlag;
+use crate::core::{CliUnstable, Edition, Feature, Features, Manifest, Package};
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{AnnotationKind, Group, Level, Snippet};
 use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
@@ -85,7 +86,7 @@ pub struct LintGroup {
     pub name: &'static str,
     pub default_level: LintLevel,
     pub desc: &'static str,
-    pub feature_gate: Option<&'static Feature>,
+    pub feature_gate: Option<Gated>,
     pub hidden: bool,
 }
 
@@ -142,7 +143,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     name: "test_dummy_unstable",
     desc: "test_dummy_unstable is meant to only be used in tests",
     default_level: LintLevel::Allow,
-    feature_gate: Some(Feature::test_dummy_unstable()),
+    feature_gate: Some(Gated::Feature(Feature::test_dummy_unstable())),
     hidden: true,
 };
 
@@ -152,11 +153,17 @@ pub struct Lint {
     pub desc: &'static str,
     pub primary_group: &'static LintGroup,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
-    pub feature_gate: Option<&'static Feature>,
+    pub feature_gate: Option<Gated>,
     /// This is a markdown formatted string that will be used when generating
     /// the lint documentation. If docs is `None`, the lint will not be
     /// documented.
     pub docs: Option<&'static str>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum Gated {
+    Cli(CliUnstableFlag),
+    Feature(&'static Feature),
 }
 
 impl Lint {
@@ -165,13 +172,14 @@ impl Lint {
         pkg_lints: &TomlToolLints,
         edition: Edition,
         unstable_features: &Features,
+        cli_unstable: &CliUnstable,
     ) -> (LintLevel, LintLevelReason) {
         // We should return `Allow` if a lint is behind a feature, but it is
         // not enabled, that way the lint does not run.
-        if self
-            .feature_gate
-            .is_some_and(|f| !unstable_features.is_enabled(f))
-        {
+        if self.feature_gate.is_some_and(|f| match f {
+            Gated::Cli(flag) => cli_unstable.is_enabled(flag),
+            Gated::Feature(f) => !unstable_features.is_enabled(f),
+        }) {
             return (LintLevel::Allow, LintLevelReason::Default);
         }
 
@@ -328,7 +336,7 @@ pub fn analyze_cargo_lints_table(
         };
 
         // Only run this on lints that are gated by a feature
-        if let Some(feature_gate) = feature_gate {
+        if let Some(Gated::Feature(feature_gate)) = feature_gate {
             verify_feature_enabled(
                 name,
                 feature_gate,
@@ -437,7 +445,7 @@ const IM_A_TEAPOT: Lint = Lint {
     desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,
     edition_lint_opts: None,
-    feature_gate: Some(Feature::test_dummy_unstable()),
+    feature_gate: Some(Gated::Feature(Feature::test_dummy_unstable())),
     docs: None,
 };
 
@@ -449,8 +457,12 @@ pub fn check_im_a_teapot(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) =
-        IM_A_TEAPOT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+    let (lint_level, reason) = IM_A_TEAPOT.level(
+        pkg_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+        gctx.cli_unstable(),
+    );
 
     if lint_level == LintLevel::Allow {
         return Ok(());
@@ -520,11 +532,16 @@ fn output_unknown_lints(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) =
-        UNKNOWN_LINTS.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+    let (lint_level, reason) = UNKNOWN_LINTS.level(
+        pkg_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+        gctx.cli_unstable(),
+    );
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
+    gctx.cli_unstable();
 
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
