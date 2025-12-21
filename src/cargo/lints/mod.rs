@@ -10,7 +10,7 @@ use cargo_util_schemas::manifest::TomlToolLints;
 use pathdiff::diff_paths;
 
 use std::borrow::Cow;
-use std::cmp::{Reverse, max_by_key};
+use std::cmp::Ordering;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
@@ -94,25 +94,14 @@ pub fn analyze_cargo_lints_table(
     let manifest_path = rel_cwd_manifest_path(manifest_path, gctx);
     let mut unknown_lints = Vec::new();
     for lint_name in cargo_lints.keys().map(|name| name) {
-        let Some((name, default_level, edition_lint_opts, feature_gate)) =
-            find_lint_or_group(lint_name)
-        else {
+        let (name, feature_gate) = if let Some(lint) = LINTS.iter().find(|l| l.name == lint_name) {
+            (lint.name, &lint.feature_gate)
+        } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == lint_name) {
+            (group.name, &group.feature_gate)
+        } else {
             unknown_lints.push(lint_name);
             continue;
         };
-
-        let (_, reason, _) = level_priority(
-            name,
-            *default_level,
-            *edition_lint_opts,
-            cargo_lints,
-            manifest.edition(),
-        );
-
-        // Only run analysis on user-specified lints
-        if !reason.is_user_specified() {
-            continue;
-        }
 
         // Only run this on lints that are gated by a feature
         if let Some(feature_gate) = feature_gate
@@ -139,28 +128,6 @@ pub fn analyze_cargo_lints_table(
     )?;
 
     Ok(())
-}
-
-fn find_lint_or_group<'a>(
-    name: &str,
-) -> Option<(
-    &'static str,
-    &LintLevel,
-    &Option<(Edition, LintLevel)>,
-    &Option<&'static Feature>,
-)> {
-    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
-        Some((
-            lint.name,
-            &lint.primary_group.default_level,
-            &lint.edition_lint_opts,
-            &lint.feature_gate,
-        ))
-    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
-        Some((group.name, &group.default_level, &None, &group.feature_gate))
-    } else {
-        None
-    }
 }
 
 fn report_feature_not_enabled(
@@ -379,28 +346,57 @@ impl Lint {
             return (LintLevel::Allow, LintLevelReason::Default);
         }
 
-        let lint_level_priority = level_priority(
-            self.name,
-            self.primary_group.default_level,
-            self.edition_lint_opts,
-            pkg_lints,
-            edition,
-        );
+        let lint = pkg_lints.get(self.name);
+        let group = pkg_lints.get(self.primary_group.name);
+        let edition_level = self
+            .edition_lint_opts
+            .as_ref()
+            .and_then(|(e, l)| if edition >= *e { Some(l) } else { None });
+        let default_level = self.primary_group.default_level;
 
-        let group_level_priority = level_priority(
-            self.primary_group.name,
-            self.primary_group.default_level,
-            None,
-            pkg_lints,
-            edition,
-        );
+        // Feature Gate > Forbid > Defined > Lint Edition > Group Default
+        //
+        // Lint vs Group comes down to priority, if they are equal the lint
+        // takes precedence, as it is more specific than the group.
+        match (lint, group, edition_level) {
+            // We first need to check for any `Forbid`
+            (Some(lint), _, _) if lint.level() == TomlLintLevel::Forbid => {
+                (lint.level().into(), LintLevelReason::Package)
+            }
+            (_, Some(group), _) if group.level() == TomlLintLevel::Forbid => {
+                (group.level().into(), LintLevelReason::Package)
+            }
+            (_, _, Some(edition_level)) if edition_level == &LintLevel::Forbid => {
+                (*edition_level, LintLevelReason::Edition(edition))
+            }
+            (_, _, _) if default_level == LintLevel::Forbid => {
+                (default_level, LintLevelReason::Default)
+            }
 
-        let (_, (l, r, _)) = max_by_key(
-            (self.name, lint_level_priority),
-            (self.primary_group.name, group_level_priority),
-            |(n, (l, _, p))| (l == &LintLevel::Forbid, *p, Reverse(*n)),
-        );
-        (l, r)
+            // There were no `Forbid`, so we look for defined levels
+            (Some(lint), Some(group), _) => {
+                // If both the lint and group are defined, we compare their
+                // priorities to see which one should take precedence
+                let level = match lint.priority().cmp(&group.priority()) {
+                    Ordering::Greater => lint.level(),
+                    // In the case of equal priority, we prefer the lint itself as
+                    // it is more specific than the group
+                    Ordering::Equal => lint.level(),
+                    Ordering::Less => group.level(),
+                };
+                (level.into(), LintLevelReason::Package)
+            }
+            (Some(lint), None, _) => (lint.level().into(), LintLevelReason::Package),
+            (None, Some(group), _) => (group.level().into(), LintLevelReason::Package),
+
+            // Nothing was defined, check far an edition specific level
+            (None, None, Some(edition_level)) => {
+                (*edition_level, LintLevelReason::Edition(edition))
+            }
+
+            // Fallback to default
+            (None, None, None) => (default_level, LintLevelReason::Default),
+        }
     }
 
     fn emitted_source(&self, lint_level: LintLevel, reason: LintLevelReason) -> String {
@@ -476,48 +472,6 @@ impl Display for LintLevelReason {
             LintLevelReason::Edition(edition) => write!(f, "in edition {}", edition),
             LintLevelReason::Package => write!(f, "in `[lints]`"),
         }
-    }
-}
-
-impl LintLevelReason {
-    fn is_user_specified(&self) -> bool {
-        match self {
-            LintLevelReason::Default => false,
-            LintLevelReason::Edition(_) => false,
-            LintLevelReason::Package => true,
-        }
-    }
-}
-
-fn level_priority(
-    name: &str,
-    default_level: LintLevel,
-    edition_lint_opts: Option<(Edition, LintLevel)>,
-    pkg_lints: &TomlToolLints,
-    edition: Edition,
-) -> (LintLevel, LintLevelReason, i8) {
-    let (unspecified_level, reason) = if let Some(level) = edition_lint_opts
-        .filter(|(e, _)| edition >= *e)
-        .map(|(_, l)| l)
-    {
-        (level, LintLevelReason::Edition(edition))
-    } else {
-        (default_level, LintLevelReason::Default)
-    };
-
-    // Don't allow the group to be overridden if the level is `Forbid`
-    if unspecified_level == LintLevel::Forbid {
-        return (unspecified_level, reason, 0);
-    }
-
-    if let Some(defined_level) = pkg_lints.get(name) {
-        (
-            defined_level.level().into(),
-            LintLevelReason::Package,
-            defined_level.priority(),
-        )
-    } else {
-        (unspecified_level, reason, 0)
     }
 }
 
