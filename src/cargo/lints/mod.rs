@@ -18,6 +18,7 @@ use std::path::Path;
 pub mod rules;
 pub use rules::LINTS;
 
+const DYNAMIC_LINT_GROUPS: &[DynamicLintGroup] = &[WARNINGS];
 pub const LINT_GROUPS: &[LintGroup] = &[
     COMPLEXITY,
     CORRECTNESS,
@@ -98,6 +99,9 @@ pub fn analyze_cargo_lints_table(
             (lint.name, &lint.feature_gate)
         } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == lint_name) {
             (group.name, &group.feature_gate)
+        } else if let Some(dynamic_group) = DYNAMIC_LINT_GROUPS.iter().find(|g| g.name == lint_name)
+        {
+            (dynamic_group.name, &None)
         } else {
             unknown_lints.push(lint_name);
             continue;
@@ -315,6 +319,17 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     default_level: LintLevel::Allow,
     feature_gate: Some(Feature::test_dummy_unstable()),
     hidden: true,
+};
+
+#[derive(Copy, Clone, Debug)]
+pub struct DynamicLintGroup {
+    pub name: &'static str,
+    pub desc: &'static str,
+}
+
+const WARNINGS: DynamicLintGroup = DynamicLintGroup {
+    name: "warnings",
+    desc: "All lints that are set to issue warnings",
 };
 
 #[derive(Copy, Clone, Debug)]
@@ -549,6 +564,24 @@ mod tests {
     }
 
     #[test]
+    fn ensure_sorted_dynamiclint_groups() {
+        // This will be printed out if the fields are not sorted.
+        let location = std::panic::Location::caller();
+        println!(
+            "\nTo fix this test, sort `DYNAMIC_LINT_GROUPS` in {}\n",
+            location.file(),
+        );
+        let actual = super::DYNAMIC_LINT_GROUPS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<Vec<_>>();
+
+        let mut expected = actual.clone();
+        expected.sort();
+        snapbox::assert_data_eq!(actual.to_debug(), expected.to_debug());
+    }
+
+    #[test]
     fn ensure_updated_lint_groups() {
         let path = snapbox::utils::current_rs!();
         let expected = std::fs::read_to_string(&path).unwrap();
@@ -581,6 +614,45 @@ mod tests {
             diff.is_empty(),
             "\n`LINT_GROUPS` did not contain all `LintGroup`s found in {}\n\
             Please add the following to `LINT_GROUPS`:\n\
+            {}",
+            path.display(),
+            need_added
+        );
+    }
+
+    #[test]
+    fn ensure_updated_dynamic_lint_groups() {
+        let path = snapbox::utils::current_rs!();
+        let expected = std::fs::read_to_string(&path).unwrap();
+        let expected = expected
+            .lines()
+            .filter_map(|l| {
+                if l.ends_with(": DynamicLintGroup = DynamicLintGroup {") {
+                    Some(
+                        l.chars()
+                            .skip(6)
+                            .take_while(|c| *c != ':')
+                            .collect::<String>(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect::<HashSet<_>>();
+        let actual = super::DYNAMIC_LINT_GROUPS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<HashSet<_>>();
+        let diff = expected.difference(&actual).sorted().collect::<Vec<_>>();
+
+        let mut need_added = String::new();
+        for name in &diff {
+            need_added.push_str(&format!("{}\n", name));
+        }
+        assert!(
+            diff.is_empty(),
+            "\n`DYNAMIC_LINT_GROUPS` did not contain all `DynamicLintGroup`s found in {}\n\
+            Please add the following to `DYNAMIC_LINT_GROUPS`:\n\
             {}",
             path.display(),
             need_added
