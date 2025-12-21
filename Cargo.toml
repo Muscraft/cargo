@@ -75,6 +75,7 @@ openssl = "0.10.75"
 openssl-sys = "0.9.111"
 os_info = { version = "3.14.0", default-features = false }
 pasetors = { version = "0.7.7", features = ["v3", "paserk", "std", "serde"] }
+paste = "1.0.15"
 pathdiff = "0.2.3"
 percent-encoding = "2.3.2"
 pkg-config = "0.3.32"
@@ -191,6 +192,7 @@ memchr.workspace = true
 opener.workspace = true
 os_info.workspace = true
 pasetors.workspace = true
+paste.workspace = true
 pathdiff.workspace = true
 rand.workspace = true
 regex.workspace = true

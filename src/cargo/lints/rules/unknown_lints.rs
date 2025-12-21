@@ -49,7 +49,7 @@ pub fn output_unknown_lints(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let (lint_level, reason) = manifest.lint_level(cargo_lints, LINT);
+    let (lint_level, reason) = manifest.lint_level(cargo_lints, LINT, gctx.cli_unstable());
     if lint_level == LintLevel::Allow {
         return Ok(());
     }

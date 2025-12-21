@@ -11,6 +11,7 @@ use crate::CargoResult;
 use crate::GlobalContext;
 use crate::core::Feature;
 use crate::core::Package;
+use crate::lints::Gated;
 use crate::lints::Lint;
 use crate::lints::LintLevel;
 use crate::lints::TEST_DUMMY_UNSTABLE;
@@ -23,7 +24,7 @@ pub const LINT: Lint = Lint {
     desc: "`im_a_teapot` is specified",
     primary_group: &TEST_DUMMY_UNSTABLE,
     edition_lint_opts: None,
-    feature_gate: Some(Feature::test_dummy_unstable()),
+    feature_gate: Some(Gated::Feature(Feature::test_dummy_unstable())),
     docs: None,
 };
 
@@ -35,8 +36,12 @@ pub fn check_im_a_teapot(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) =
-        LINT.level(pkg_lints, manifest.edition(), manifest.unstable_features());
+    let (lint_level, reason) = LINT.level(
+        pkg_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+        gctx.cli_unstable(),
+    );
 
     if lint_level == LintLevel::Allow {
         return Ok(());

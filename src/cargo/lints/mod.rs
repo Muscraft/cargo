@@ -1,4 +1,5 @@
-use crate::core::{Edition, Feature, Features, MaybePackage, Package};
+use crate::core::features::CliUnstableFlag;
+use crate::core::{CliUnstable, Edition, Feature, Features, MaybePackage, Package};
 use crate::{CargoResult, GlobalContext};
 
 use annotate_snippets::AnnotationKind;
@@ -40,8 +41,18 @@ pub enum ManifestFor<'a> {
 }
 
 impl ManifestFor<'_> {
-    fn lint_level(&self, pkg_lints: &TomlToolLints, lint: Lint) -> (LintLevel, LintLevelReason) {
-        lint.level(pkg_lints, self.edition(), self.unstable_features())
+    fn lint_level(
+        &self,
+        pkg_lints: &TomlToolLints,
+        lint: Lint,
+        cli_unstable: &CliUnstable,
+    ) -> (LintLevel, LintLevelReason) {
+        lint.level(
+            pkg_lints,
+            self.edition(),
+            self.unstable_features(),
+            cli_unstable,
+        )
     }
 
     pub fn contents(&self) -> Option<&str> {
@@ -108,7 +119,7 @@ pub fn analyze_cargo_lints_table(
         };
 
         // Only run this on lints that are gated by a feature
-        if let Some(feature_gate) = feature_gate
+        if let Some(Gated::Feature(feature_gate)) = feature_gate
             && !manifest.unstable_features().is_enabled(feature_gate)
         {
             report_feature_not_enabled(
@@ -244,7 +255,7 @@ pub struct LintGroup {
     pub name: &'static str,
     pub default_level: LintLevel,
     pub desc: &'static str,
-    pub feature_gate: Option<&'static Feature>,
+    pub feature_gate: Option<Gated>,
     pub hidden: bool,
 }
 
@@ -317,7 +328,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     name: "test_dummy_unstable",
     desc: "test_dummy_unstable is meant to only be used in tests",
     default_level: LintLevel::Allow,
-    feature_gate: Some(Feature::test_dummy_unstable()),
+    feature_gate: Some(Gated::Feature(Feature::test_dummy_unstable())),
     hidden: true,
 };
 
@@ -338,7 +349,7 @@ pub struct Lint {
     pub desc: &'static str,
     pub primary_group: &'static LintGroup,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
-    pub feature_gate: Option<&'static Feature>,
+    pub feature_gate: Option<Gated>,
     /// This is a markdown formatted string that will be used when generating
     /// the lint documentation. If docs is `None`, the lint will not be
     /// documented.
@@ -351,13 +362,14 @@ impl Lint {
         pkg_lints: &TomlToolLints,
         edition: Edition,
         unstable_features: &Features,
+        cli_unstable: &CliUnstable,
     ) -> (LintLevel, LintLevelReason) {
         // We should return `Allow` if a lint is behind a feature, but it is
         // not enabled, that way the lint does not run.
-        if self
-            .feature_gate
-            .is_some_and(|f| !unstable_features.is_enabled(f))
-        {
+        if self.feature_gate.is_some_and(|f| match f {
+            Gated::Cli(flag) => cli_unstable.is_enabled(flag),
+            Gated::Feature(f) => !unstable_features.is_enabled(f),
+        }) {
             return (LintLevel::Allow, LintLevelReason::Default);
         }
 
@@ -488,6 +500,12 @@ impl Display for LintLevelReason {
             LintLevelReason::Package => write!(f, "in `[lints]`"),
         }
     }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum Gated {
+    Cli(CliUnstableFlag),
+    Feature(&'static Feature),
 }
 
 #[cfg(test)]

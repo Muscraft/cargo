@@ -64,6 +64,7 @@ pub fn blanket_hint_mostly_unused(
         pkg_lints,
         maybe_pkg.edition(),
         maybe_pkg.unstable_features(),
+        gctx.cli_unstable(),
     );
 
     if lint_level == LintLevel::Allow {

@@ -815,6 +815,26 @@ macro_rules! unstable_cli_options {
             }
         }
 
+        paste::paste! {
+            #[derive(Copy, Clone, Debug)]
+            pub enum CliUnstableFlag {
+                $(
+                    [<$element:camel>],
+                )*
+            }
+
+            impl CliUnstableFlag {
+                pub fn temp(self) -> &'static str {
+
+                   match self {
+                    $(
+                        CliUnstableFlag::[<$element:camel>] => stringify!($element),
+                    )*
+                    }
+                }
+            }
+        }
+
         #[cfg(test)]
         mod test {
             #[test]
@@ -1449,6 +1469,61 @@ impl CliUnstable {
         }
 
         Ok(())
+    }
+
+    pub fn is_enabled(&self, flag: CliUnstableFlag) -> bool {
+        match flag {
+            CliUnstableFlag::AllowFeatures => self.allow_features.is_some(),
+            CliUnstableFlag::PrintImATeapot => self.print_im_a_teapot,
+            CliUnstableFlag::AdvancedEnv => self.advanced_env,
+            CliUnstableFlag::AsymmetricToken => self.asymmetric_token,
+            CliUnstableFlag::AvoidDevDeps => self.avoid_dev_deps,
+            CliUnstableFlag::BinaryDepDepinfo => self.binary_dep_depinfo,
+            CliUnstableFlag::Bindeps => self.bindeps,
+            CliUnstableFlag::BuildAnalysis => self.build_analysis,
+            CliUnstableFlag::BuildDirNewLayout => self.build_dir_new_layout,
+            CliUnstableFlag::BuildStd => self.build_std.is_some(),
+            CliUnstableFlag::BuildStdFeatures => self.build_std_features.is_some(),
+            CliUnstableFlag::CargoLints => self.cargo_lints,
+            CliUnstableFlag::ChecksumFreshness => self.checksum_freshness,
+            CliUnstableFlag::CodegenBackend => self.codegen_backend,
+            CliUnstableFlag::DirectMinimalVersions => self.direct_minimal_versions,
+            CliUnstableFlag::DualProcMacros => self.dual_proc_macros,
+            CliUnstableFlag::FeatureUnification => self.feature_unification,
+            CliUnstableFlag::Features => self.features.is_some(),
+            CliUnstableFlag::FixEdition => self.fix_edition.is_some(),
+            CliUnstableFlag::Gc => self.gc,
+            CliUnstableFlag::Git => self.git.is_some(),
+            CliUnstableFlag::Gitoxide => self.gitoxide.is_some(),
+            CliUnstableFlag::HostConfig => self.host_config,
+            CliUnstableFlag::MinimalVersions => self.minimal_versions,
+            CliUnstableFlag::MsrvPolicy => self.msrv_policy,
+            CliUnstableFlag::MtimeOnUse => self.mtime_on_use,
+            CliUnstableFlag::NextLockfileBump => self.next_lockfile_bump,
+            CliUnstableFlag::NoEmbedMetadata => self.no_embed_metadata,
+            CliUnstableFlag::NoIndexUpdate => self.no_index_update,
+            CliUnstableFlag::PanicAbortTests => self.panic_abort_tests,
+            CliUnstableFlag::PanicImmediateAbort => self.panic_immediate_abort,
+            CliUnstableFlag::ProfileHintMostlyUnused => self.profile_hint_mostly_unused,
+            CliUnstableFlag::ProfileRustflags => self.profile_rustflags,
+            CliUnstableFlag::PublicDependency => self.public_dependency,
+            CliUnstableFlag::PublishTimeout => self.publish_timeout,
+            CliUnstableFlag::RootDir => self.root_dir.is_some(),
+            CliUnstableFlag::RustcUnicode => self.rustc_unicode,
+            CliUnstableFlag::RustdocDepinfo => self.rustdoc_depinfo,
+            CliUnstableFlag::RustdocMap => self.rustdoc_map,
+            CliUnstableFlag::RustdocMergeableInfo => self.rustdoc_mergeable_info,
+            CliUnstableFlag::RustdocScrapeExamples => self.rustdoc_scrape_examples,
+            CliUnstableFlag::Sbom => self.sbom,
+            CliUnstableFlag::Script => self.script,
+            CliUnstableFlag::SectionTimings => self.section_timings,
+            CliUnstableFlag::SeparateNightlies => self.separate_nightlies,
+            CliUnstableFlag::SkipRustdocFingerprint => self.skip_rustdoc_fingerprint,
+            CliUnstableFlag::TargetAppliesToHost => self.target_applies_to_host,
+            CliUnstableFlag::TrimPaths => self.trim_paths,
+            CliUnstableFlag::UnstableOptions => self.unstable_options,
+            CliUnstableFlag::Warnings => self.warnings,
+        }
     }
 
     /// Generates an error if `-Z unstable-options` was not used for a new,
